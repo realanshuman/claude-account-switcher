@@ -92,3 +92,7 @@ scripts/test.sh
 
 The test runs every switch against a fake Claude app and a fake data folder. It never
 quits or touches the real Claude. It needs `node` and `sqlite3`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
