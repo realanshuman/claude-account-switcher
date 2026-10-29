@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Account Switcher</title>
+<meta name="description" content="A small menu bar app for the Claude Mac app. Keep every account signed in and switch between them in one click.">
+<meta property="og:title" content="Claude Account Switcher">
+<meta property="og:description" content="Switch Claude accounts on your Mac without signing out. Free and open source.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='7' fill='%2308090b'/%3E%3Ccircle cx='9.6' cy='12' r='4.2' fill='%23fff'/%3E%3Ccircle cx='14.4' cy='12' r='4.2' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E">
+<script>document.documentElement.classList.add("js")</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --card: #f9f7f4;
+    --card-2: #f3f1ed;
+    --ink: #08090b;
+    --fg: #1b1d1f;
+    --muted: #6f7473;
+    --faint: #9aa09e;
+    --line: #ecebe7;
+    --line-2: #dfddd8;
+    --primary-hover: #2a2e33;
+    --mac-blue: #007aff;
+    --mac-green: #34c759;
+    --radius: 14px;
+    --ease: cubic-bezier(.2, .9, .3, 1);
+    --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.6 var(--sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+  code, kbd { font-family: var(--mono); font-size: .88em; }
+  .wrap { width: min(1080px, 100% - 32px); margin: 0 auto; }
+
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255, 255, 255, .86);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .25s ease;
+  }
+  .nav.scrolled { border-bottom-color: var(--line); }
+  .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; color: var(--ink); }
+  .brand svg { width: 24px; height: 24px; flex: none; }
+  .nav-links { display: flex; align-items: center; gap: 6px; }
+  .nav-links a.link { padding: 6px 10px; border-radius: 8px; font-size: 14px; color: var(--muted); transition: color .2s, background .2s; }
+  .nav-links a.link:hover { color: var(--ink); background: var(--card); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 40px; padding: 0 16px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; letter-spacing: -.005em;
+    border: 1px solid var(--line-2); background: var(--bg); color: var(--ink);
+    cursor: pointer; white-space: nowrap;
+    transition: background .2s, border-color .2s, transform .2s var(--ease);
+  }
+  .btn:hover { background: var(--card); border-color: #d2d0ca; }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+  .btn.small { height: 34px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
+  .btn svg { width: 16px; height: 16px; flex: none; }
+
+  /* Hero */
+  .hero { padding: 76px 0 40px; text-align: center; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 12px 5px 6px; border: 1px solid var(--line); border-radius: 999px;
+    font-size: 13px; color: var(--muted); background: var(--bg);
+  }
+  .tag b { font-weight: 500; color: var(--ink); background: var(--card-2); border-radius: 999px; padding: 1px 8px; }
+  h1, h2, .lede, .sub { text-wrap: balance; }
+  p { text-wrap: pretty; }
+  h1 {
+    margin: 22px auto 0; max-width: 820px;
+    font-size: clamp(40px, 6.4vw, 70px); line-height: 1.02; letter-spacing: -.045em;
+    font-weight: 600; color: var(--ink);
+  }
+  .lede { margin: 22px auto 0; max-width: 560px; font-size: clamp(17px, 2vw, 19px); line-height: 1.55; color: var(--muted); }
+  .cta { margin-top: 32px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .fine { margin-top: 18px; font-size: 13px; color: var(--faint); }
+  .fine span + span::before { content: "·"; margin: 0 8px; }
+
+  /* Stage: the real panel, redrawn */
+  .stage-wrap { margin: 56px auto 0; width: min(940px, 100%); }
+  .stage {
+    position: relative; height: 500px; border-radius: 20px; overflow: hidden;
+    background: var(--card); border: 1px solid var(--line);
+    text-align: left;
+  }
+  .menubar {
+    position: absolute; inset: 0 0 auto 0; height: 34px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 18px;
+    background: rgba(255, 255, 255, .72); border-bottom: 1px solid var(--line);
+    font-size: 13px; color: #2b2d30;
+  }
+  .menubar .left { display: flex; gap: 18px; align-items: center; }
+  .menubar .left b { font-weight: 600; }
+  .menubar .left span { color: #4a4d50; }
+  .menubar .right { display: flex; align-items: center; gap: 4px; }
+  .mb-item { display: grid; place-items: center; height: 24px; min-width: 28px; padding: 0 5px; border-radius: 6px; color: #2b2d30; }
+  .mb-item svg { width: 16px; height: 16px; }
+  .mb-item.time { font-variant-numeric: tabular-nums; padding: 0 6px; }
+  .mb-item.ours { cursor: pointer; transition: background .2s; }
+  .mb-item.ours.on { background: rgba(0, 0, 0, .09); }
+  .stage-hint { margin-top: 14px; text-align: center; font-size: 13px; color: var(--faint); }
+
+  .panel {
+    position: absolute; top: 42px; left: 0; width: min(320px, calc(100% - 24px));
+    background: rgba(255, 255, 255, .96); border-radius: 12px;
+    border: .5px solid rgba(0, 0, 0, .14);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 12px 32px rgba(0, 0, 0, .10);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--sans);
+    color: #1d1d1f; transform-origin: top center;
+    transition: opacity .22s ease, transform .3s var(--ease);
+  }
+  .panel.closed { opacity: 0; transform: translateY(-6px) scale(.985); pointer-events: none; }
+  .p-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: .5px solid rgba(0, 0, 0, .09); }
+  .p-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .p-status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #86868b; line-height: 1.4; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mac-green); transition: background .3s; }
+  .dot.off { background: #c7c7cc; }
+  .p-more { display: grid; place-items: center; width: 24px; height: 22px; color: #86868b; }
+  .p-more svg { width: 14px; height: 14px; }
+  .p-body { position: relative; overflow: hidden; transition: height .38s var(--ease); }
+  .view { padding: 6px; transition: opacity .14s ease, transform .3s var(--ease); }
+  /* The view going out fades first, then the one coming in, so their text never overlaps. */
+  .p-body.show-progress .view.progress, .p-body:not(.show-progress) .view.accounts { transition: opacity .24s ease .14s, transform .36s var(--ease) .1s; }
+  .view.accounts { position: relative; }
+  .view.progress { position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(6px); pointer-events: none; padding: 14px; }
+  .p-body.show-progress .view.accounts { position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(-6px); pointer-events: none; }
+  .p-body.show-progress .view.progress { position: relative; opacity: 1; transform: none; pointer-events: auto; }
+
+  .row { border-radius: 8px; transition: background .15s ease; }
+  .row.enter { animation: rowIn .45s var(--ease) both; }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(-6px); } }
+  .row-main {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 8px;
+    background: none; border: 0; text-align: left; cursor: pointer; border-radius: 8px;
+  }
+  .row:not(.is-current):hover, .row.is-hover, .row.is-open { background: rgba(0, 0, 0, .05); }
+  .row.is-current .row-main { cursor: default; }
+  .av {
+    flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+    font-size: 11px; font-weight: 600; color: var(--t, #007aff);
+    background: color-mix(in srgb, var(--t, #007aff) 15%, transparent);
+  }
+  .av.add { color: #86868b; background: none; border: 1px solid rgba(0, 0, 0, .16); }
+  .av.add svg { width: 12px; height: 12px; }
+  .row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .row-name { font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-detail { font-size: 11px; color: #86868b; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-end { flex: none; display: flex; align-items: center; }
+  .pill { display: none; font-size: 11px; font-weight: 500; color: #86868b; padding: 1px 7px; border-radius: 999px; border: .5px solid rgba(0, 0, 0, .2); }
+  .row.is-current .pill { display: inline-block; }
+  .go { font-size: 12px; font-weight: 500; color: var(--mac-blue); opacity: 0; transition: opacity .15s; }
+  .row:not(.is-current):not(.is-open):hover .go, .row.is-hover:not(.is-open) .go { opacity: 1; }
+  .row.is-current .go { display: none; }
+  .row-name.plain { font-weight: 400; }
+
+  .confirm { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .36s var(--ease), opacity .25s ease; opacity: 0; }
+  .row.is-open .confirm { grid-template-rows: 1fr; opacity: 1; }
+  .confirm > div { overflow: hidden; }
+  .confirm-inner { padding: 0 8px 10px 46px; }
+  .confirm p { margin: 0 0 10px; font-size: 12px; line-height: 1.45; color: #6e6e73; }
+  .confirm p b { font-weight: 500; color: #1d1d1f; }
+  .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .b-out, .b-fill {
+    height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: opacity .15s, background .15s, transform .15s;
+  }
+  .b-out { background: rgba(0, 0, 0, .03); border: .5px solid rgba(0, 0, 0, .18); color: #1d1d1f; }
+  .b-out:hover { background: rgba(0, 0, 0, .07); }
+  .b-fill { background: var(--mac-blue); border: 0; color: #fff; padding: 0 12px; }
+  .b-fill:hover { opacity: .9; }
+  .b-fill.is-pressed, .b-fill:active { opacity: .78; transform: scale(.97); }
+  .notice { display: flex; gap: 8px; margin: 0 0 4px; padding: 10px; border: .5px solid rgba(0, 0, 0, .14); border-radius: 8px; font-size: 12px; line-height: 1.45; }
+  .notice svg { flex: none; width: 13px; height: 13px; margin-top: 2px; color: #86868b; }
+
+  .pr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .pr-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .pr-sub { font-size: 11px; color: #86868b; line-height: 1.4; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .steps li { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #86868b; transition: color .2s; }
+  .steps li.active { color: #1d1d1f; font-weight: 500; }
+  .steps li.done { color: #1d1d1f; }
+  .st { position: relative; flex: none; width: 16px; height: 16px; display: grid; place-items: center; }
+  .st::before { content: ""; width: 13px; height: 13px; border-radius: 50%; border: 1.2px solid rgba(0, 0, 0, .2); box-sizing: border-box; transition: opacity .2s; }
+  li.active .st::before { border-color: var(--mac-blue); border-right-color: transparent; animation: spin .85s linear infinite; }
+  li.done .st::before { opacity: 0; }
+  .st svg { position: absolute; width: 14px; height: 14px; opacity: 0; transform: scale(.6); transition: opacity .2s, transform .3s var(--ease); }
+  li.done .st svg { opacity: 1; transform: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Sections */
+  section.block { padding: 96px 0 0; scroll-margin-top: 24px; }
+  section.block .label { scroll-margin-top: 80px; }
+  .label { display: inline-block; font-size: 14px; font-weight: 500; color: var(--muted); margin-bottom: 12px; }
+  h2 { margin: 0; font-size: clamp(30px, 4vw, 42px); line-height: 1.1; letter-spacing: -.035em; font-weight: 600; color: var(--ink); max-width: 720px; }
+  .sub { margin: 14px 0 0; max-width: 600px; color: var(--muted); font-size: 17px; }
+  .head-center { text-align: center; }
+  .head-center h2, .head-center .sub { margin-left: auto; margin-right: auto; }
+
+  .steps-row { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .step-card { padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+  .num { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--card-2); font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .step-card h3, .feat h3 { margin: 18px 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -.015em; color: var(--ink); }
+  .step-card p, .feat p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+  .feats { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .feat { padding: 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); transition: background .25s; }
+  .feat:hover { background: var(--card); }
+  .feat:nth-child(3n) { border-right: 0; }
+  .feat:nth-last-child(-n + 3) { border-bottom: 0; }
+  .icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+  .icon svg { width: 18px; height: 18px; }
+  .feat code { background: var(--card-2); padding: 1px 5px; border-radius: 5px; color: var(--fg); }
+
+  .swap { margin-top: 44px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
+  .swap-card { padding: 28px; border-radius: var(--radius); border: 1px solid var(--line); }
+  .swap-card.soft { background: var(--card); }
+  .swap-card h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; letter-spacing: -.015em; color: var(--ink); }
+  .swap-card > p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
+  .swap-card.soft .list li { border-top-color: var(--line-2); }
+  .list li:first-child { border-top: 0; }
+  .list li.top { align-items: flex-start; }
+  .list li.top .tick { margin-top: 3px; }
+  .list code { color: var(--ink); }
+  .list .k { margin-left: auto; font-size: 12.5px; color: var(--faint); }
+  .tick, .cross { flex: none; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; }
+  .tick { background: var(--ink); color: #fff; }
+  .cross { border: 1px solid var(--line-2); color: var(--muted); }
+  .tick svg, .cross svg { width: 10px; height: 10px; }
+  .keys { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .keys code { font-size: 12px; padding: 3px 7px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line-2); }
+  .note { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-2); font-size: 14px; color: var(--muted); }
+
+  .install { margin-top: 44px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; align-items: start; }
+  .req { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .req h3 { margin: 0 0 14px; font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -.015em; }
+  .req .list li { font-size: 14.5px; }
+  .terminal { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--bg); }
+  .term-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+  .term-bar span { font-size: 13px; color: var(--muted); }
+  .term-body { padding: 18px 20px; font-family: var(--mono); font-size: 13.5px; line-height: 1.9; color: var(--fg); overflow-x: auto; white-space: pre; }
+  .term-body .p { color: var(--faint); user-select: none; }
+  .term-body .c { color: var(--faint); }
+  .term-foot { padding: 14px 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+  .faq { margin: 44px auto 0; max-width: 760px; border-top: 1px solid var(--line); }
+  details { border-bottom: 1px solid var(--line); }
+  summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 20px 2px; font-size: 16.5px; font-weight: 500; color: var(--ink); letter-spacing: -.01em;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary .plus { flex: none; position: relative; width: 14px; height: 14px; color: var(--muted); transition: transform .3s var(--ease); }
+  summary .plus::before, summary .plus::after { content: ""; position: absolute; inset: 6px 0 auto; height: 1.6px; border-radius: 2px; background: currentColor; }
+  summary .plus::after { transform: rotate(90deg); transition: transform .3s var(--ease); }
+  details[open] summary .plus::after { transform: rotate(0); }
+  .answer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+  .answer > div { overflow: hidden; }
+  .answer p { margin: 0 0 20px; color: var(--muted); font-size: 15.5px; max-width: 640px; }
+  .answer code { background: var(--card-2); padding: 1px 5px; border-radius: 5px; color: var(--fg); }
+  details.opening .answer, details[open]:not(.closing) .answer { grid-template-rows: 1fr; }
+
+  .final { margin: 112px 0 0; padding: 64px 24px; text-align: center; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
+  .final h2 { margin: 0 auto; }
+  .final .sub { margin: 14px auto 0; }
+
+  footer { margin-top: 72px; border-top: 1px solid var(--line); }
+  footer .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 28px 0 36px; flex-wrap: wrap; }
+  footer .brand { font-size: 14px; }
+  footer .brand svg { width: 20px; height: 20px; }
+  .foot-links { display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  .foot-links a:hover { color: var(--ink); }
+  .legal { width: 100%; margin: 0; font-size: 12.5px; color: var(--faint); }
+
+  /* Reveal */
+  /* Only hidden once the script runs, so the page reads fine without it. */
+  .js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .7s ease, transform .8s var(--ease); }
+  .js .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 880px) {
+    .steps-row, .swap, .install { grid-template-columns: 1fr; }
+    .feats { grid-template-columns: 1fr 1fr; }
+    .feat:nth-child(3n) { border-right: 1px solid var(--line); }
+    .feat:nth-child(2n) { border-right: 0; }
+    .feat:nth-last-child(-n + 3) { border-bottom: 1px solid var(--line); }
+    .feat:nth-last-child(-n + 2) { border-bottom: 0; }
+  }
+  @media (max-width: 640px) {
+    .nav-links a.link { display: none; }
+    .hero { padding-top: 52px; }
+    .stage { height: 410px; }
+    .menubar .left span, .mb-item.hide-sm { display: none; }
+    .feats { grid-template-columns: 1fr; }
+    .feat, .feat:nth-child(3n), .feat:nth-child(2n) { border-right: 0; border-bottom: 1px solid var(--line); }
+    .feat:last-child { border-bottom: 0; }
+    section.block { padding-top: 72px; }
+    .final { padding: 48px 20px; margin-top: 88px; }
+    .list .k { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
+    html { scroll-behavior: auto; }
+    .js .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 24 24"><rect width="24" height="24" rx="7" fill="#08090b"/><circle cx="9.6" cy="12" r="4.2" fill="#fff"/><circle cx="14.4" cy="12" r="4.2" fill="none" stroke="#fff" stroke-width="1.6"/></symbol>
+  <symbol id="github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="check" viewBox="0 0 12 12"><path d="M2.5 6.3l2.3 2.2 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="x" viewBox="0 0 12 12"><path d="M3.5 3.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><svg><use href="#mark"/></svg>Claude Account Switcher</a>
+    <nav class="nav-links">
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="#privacy">Privacy</a>
+      <a class="link" href="#install">Install</a>
+      <a class="link" href="#faq">FAQ</a>
+      <a class="btn small" href="https://github.com/realanshuman/claude-account-switcher"><svg><use href="#github"/></svg>GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <span class="tag reveal"><b>Free</b>Open source menu bar app for macOS</span>
+      <h1 class="reveal">Switch Claude accounts without signing out.</h1>
+      <p class="lede reveal">Keep your work and personal accounts signed in on the Claude Mac app, and move between them in one click from the menu bar.</p>
+      <div class="cta reveal">
+        <a class="btn primary" href="#install">Install on your Mac</a>
+        <a class="btn" href="https://github.com/realanshuman/claude-account-switcher"><svg><use href="#github"/></svg>View on GitHub</a>
+      </div>
+      <p class="fine reveal"><span>macOS 14 or later</span><span>MIT licensed</span><span>Not affiliated with Anthropic</span></p>
+
+      <div class="stage-wrap reveal">
+        <div class="stage" id="stage">
+          <div class="menubar">
+            <div class="left"><b>Finder</b><span>File</span><span>Edit</span><span>View</span><span>Window</span></div>
+            <div class="right">
+              <span class="mb-item ours on" id="ourIcon" title="Claude Account Switcher" role="button" tabindex="0" aria-label="Show or hide the accounts panel">
+                <svg viewBox="0 0 16 16"><circle cx="6" cy="8" r="4.1" fill="currentColor"/><circle cx="10" cy="8" r="4.1" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+              </span>
+              <span class="mb-item hide-sm"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2l3 3" stroke-linecap="round"/></svg></span>
+              <span class="mb-item"><svg viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="4" width="16" height="8" rx="2.4"/><rect x="3" y="5.5" width="10.5" height="5" rx="1.2" fill="currentColor" stroke="none"/><path d="M19.5 6.6v2.8" stroke-linecap="round" stroke-width="1.6"/></svg></span>
+              <span class="mb-item hide-sm"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3.5" width="5.2" height="3.6" rx="1.8"/><rect x="8.8" y="3.5" width="5.2" height="3.6" rx="1.8"/><rect x="2" y="8.9" width="5.2" height="3.6" rx="1.8"/><rect x="8.8" y="8.9" width="5.2" height="3.6" rx="1.8"/></svg></span>
+              <span class="mb-item time" id="clock">Tue 9:41</span>
+            </div>
+          </div>
+
+          <div class="panel" id="panel" aria-label="Claude Account Switcher panel, a working demo">
+            <div class="p-head">
+              <div>
+                <div class="p-title">Claude accounts</div>
+                <div class="p-status"><i class="dot" id="dot"></i><span id="status">Claude is open</span></div>
+              </div>
+              <span class="p-more"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></span>
+            </div>
+            <div class="p-body" id="pbody">
+              <div class="view accounts" id="list"></div>
+              <div class="view progress" aria-live="polite">
+                <div class="pr-head">
+                  <span class="av" id="prAv"></span>
+                  <div><div class="pr-title" id="prTitle"></div><div class="pr-sub" id="prSub"></div></div>
+                </div>
+                <ol class="steps" id="steps"></ol>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="stage-hint">This is the app's panel, redrawn for the web. Click an account to try a switch.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="how">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="label">How it works</span>
+        <h2>Every account stays signed in. You pick which one Claude uses.</h2>
+        <p class="sub">Claude keeps one account at a time, and signing out ends that session for good. The switcher files away the one you're leaving instead, so coming back is one click.</p>
+      </div>
+      <div class="steps-row">
+        <div class="step-card reveal">
+          <span class="num">1</span>
+          <h3>Add your accounts</h3>
+          <p>Choose Add another account. Claude opens at its sign-in screen, you sign in with the other account, and both stay in the list.</p>
+        </div>
+        <div class="step-card reveal">
+          <span class="num">2</span>
+          <h3>Click to switch</h3>
+          <p>Pick an account and confirm. Claude quits, the account you're leaving is saved on your Mac, and the other one is put in place.</p>
+        </div>
+        <div class="step-card reveal">
+          <span class="num">3</span>
+          <h3>Back in seconds</h3>
+          <p>Claude opens again, signed in as the account you picked. Your Code sessions and projects are waiting under each account.</p>
+        </div>
+      </div>
+
+      <div class="feats">
+        <div class="feat reveal">
+          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.2"/><path d="M6.8 10.2l2.2 2.1 4.2-4.6"/></svg></span>
+          <h3>Nobody gets signed out</h3>
+          <p>Signing out of Claude ends the session. The switcher never does it, so every account is ready the moment you come back.</p>
+        </div>
+        <div class="feat reveal">
+          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="13" height="9" rx="1.6"/><path d="M1.8 16h16.4"/></svg></span>
+          <h3>Stays on your Mac</h3>
+          <p>No servers, no sign-up, no analytics. Sign-ins are copied between folders on your Mac and nothing is sent anywhere.</p>
+        </div>
+        <div class="feat reveal">
+          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5l1.4 1.4L7 4.3M3 11.5l1.4 1.4L7 10.3"/><path d="M10 5.6h7M10 11.6h7M10 16.6h7"/></svg></span>
+          <h3>Shows every step</h3>
+          <p>Quit, save, sign in, open. If Claude asks whether to quit, the panel tells you, and Cancel leaves everything as it was.</p>
+        </div>
+        <div class="feat reveal">
+          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 6.2c0-1 .8-1.7 1.7-1.7h3.2l1.7 1.9h6.1c.9 0 1.7.8 1.7 1.7v6.3c0 1-.8 1.7-1.7 1.7H4.5c-.9 0-1.7-.8-1.7-1.7z"/></svg></span>
+          <h3>Your work stays filed</h3>
+          <p>Claude already keeps Code sessions and projects per account. After a switch, each account finds its own, just as it left them.</p>
+        </div>
+        <div class="feat reveal">
+          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.2"/><path d="M13.2 10v1.2c0 1.3 1 2.3 2.2 2.3s2.1-1 2.1-2.3V10a7.5 7.5 0 10-3 6"/></svg></span>
+          <h3>Named for you</h3>
+          <p>Accounts show up by their email when Claude Code knows it. Rename any of them in place, right in the panel.</p>
+        </div>
+        <div class="feat reveal">
+          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M6 8l2.4 2L6 12M10.5 12.5h3.5"/></svg></span>
+          <h3>Works from the terminal</h3>
+          <p>The same switch from a script or a launcher: <code>switch work</code>, <code>add</code> and <code>list</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="privacy">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="label">Privacy</span>
+        <h2>It moves a few files. Here is every one.</h2>
+        <p class="sub">Nothing is decrypted, uploaded or read from your Keychain. A switch only swaps the parts of Claude's folder that belong to whoever is signed in.</p>
+      </div>
+      <div class="swap">
+        <div class="swap-card soft reveal">
+          <h3>Swapped on each switch</h3>
+          <p>From Claude's folder in Application Support.</p>
+          <ul class="list">
+            <li><span class="tick"><svg><use href="#check"/></svg></span><code>Cookies</code><span class="k">the claude.ai session</span></li>
+            <li><span class="tick"><svg><use href="#check"/></svg></span><code>Local Storage, Session Storage</code><span class="k">web storage</span></li>
+            <li><span class="tick"><svg><use href="#check"/></svg></span><code>IndexedDB, WebStorage, Service Worker</code><span class="k">web storage</span></li>
+            <li class="top">
+              <span class="tick"><svg><use href="#check"/></svg></span>
+              <div>
+                <div>Four keys in <code>config.json</code></div>
+                <div class="keys"><code>oauth:tokenCache</code><code>oauth:tokenCacheV2</code><code>lastKnownAccountUuid</code><code>bootSideSessions</code></div>
+              </div>
+            </li>
+          </ul>
+          <p class="note">Before every switch it keeps a copy of the current sign-in, and puts it back if anything goes wrong.</p>
+        </div>
+        <div class="swap-card reveal">
+          <h3>Never touched</h3>
+          <p>Everything else stays exactly where it is.</p>
+          <ul class="list">
+            <li><span class="cross"><svg><use href="#x"/></svg></span>Your Keychain and passwords</li>
+            <li><span class="cross"><svg><use href="#x"/></svg></span>Anthropic's servers</li>
+            <li><span class="cross"><svg><use href="#x"/></svg></span>Code sessions, projects and worktrees</li>
+            <li><span class="cross"><svg><use href="#x"/></svg></span>Settings, connectors and extensions</li>
+            <li><span class="cross"><svg><use href="#x"/></svg></span>Anything outside Claude's folder</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="install">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="label">Install</span>
+        <h2>Built on your Mac in about a minute.</h2>
+        <p class="sub">The app builds from source with Apple's free command line tools, lands in your Applications folder and opens in the menu bar.</p>
+      </div>
+      <div class="install">
+        <div class="req reveal">
+          <h3>You need</h3>
+          <ul class="list">
+            <li><span class="tick"><svg><use href="#check"/></svg></span>macOS 14 Sonoma or later</li>
+            <li><span class="tick"><svg><use href="#check"/></svg></span>The Claude Mac app</li>
+            <li><span class="tick"><svg><use href="#check"/></svg></span>Command line tools: <code>xcode-select --install</code></li>
+          </ul>
+        </div>
+        <div class="terminal reveal">
+          <div class="term-bar"><span>Terminal</span><button class="btn small" type="button" data-copy="install">Copy</button></div>
+<div class="term-body" id="install-cmd"><span class="p">$ </span>git clone https://github.com/realanshuman/claude-account-switcher.git
+<span class="p">$ </span>cd claude-account-switcher
+<span class="p">$ </span>./install.sh</div>
+          <div class="term-foot">Then click the icon in your menu bar and choose Add another account.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="faq">
+    <div class="wrap">
+      <div class="head-center reveal">
+        <span class="label">FAQ</span>
+        <h2>Questions, answered.</h2>
+      </div>
+      <div class="faq reveal">
+        <details>
+          <summary>Is this made by Anthropic?<span class="plus"></span></summary>
+          <div class="answer"><div><p>No. It's an independent, open source tool. It isn't affiliated with or endorsed by Anthropic, and it only works with files the Claude Mac app keeps on your own Mac.</p></div></div>
+        </details>
+        <details>
+          <summary>Will it sign me out of anything?<span class="plus"></span></summary>
+          <div class="answer"><div><p>No. It never signs any account out, so every session stays valid. To keep it that way, switch with the switcher rather than Log out in Claude, which ends that account's session.</p></div></div>
+        </details>
+        <details>
+          <summary>What happens to things running in Claude?<span class="plus"></span></summary>
+          <div class="answer"><div><p>Claude restarts to switch, so anything running in it stops. Code sessions stay in the sidebar, filed under their own account, and pick up when you switch back.</p></div></div>
+        </details>
+        <details>
+          <summary>Does it read my passwords or Keychain?<span class="plus"></span></summary>
+          <div class="answer"><div><p>No. Claude encrypts its sign-in with a key in your Keychain. The switcher copies the encrypted files exactly as they are and never reads the key, so it can't see your session or password.</p></div></div>
+        </details>
+        <details>
+          <summary>What if a saved sign-in expires?<span class="plus"></span></summary>
+          <div class="answer"><div><p>Claude opens at its sign-in screen. Sign in with that account and it's saved again on the next switch. Nothing else changes.</p></div></div>
+        </details>
+        <details>
+          <summary>Why build from source instead of a download?<span class="plus"></span></summary>
+          <div class="answer"><div><p>There's no notarized download yet. Building it yourself takes about a minute, and you can read every line it runs first. The included test switches a fake Claude app and never touches the real one.</p></div></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="final reveal">
+      <h2>Keep every account one click away.</h2>
+      <p class="sub">Free, open source and small enough to read in an afternoon.</p>
+      <div class="cta">
+        <a class="btn primary" href="#install">Install on your Mac</a>
+        <a class="btn" href="https://github.com/realanshuman/claude-account-switcher"><svg><use href="#github"/></svg>Star on GitHub</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top"><svg><use href="#mark"/></svg>Claude Account Switcher</a>
+    <div class="foot-links">
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="https://github.com/realanshuman/claude-account-switcher">GitHub</a>
+      <a href="https://github.com/realanshuman/claude-account-switcher/blob/main/LICENSE">MIT License</a>
+    </div>
+    <p class="legal">An independent project, not affiliated with or endorsed by Anthropic. Claude is a trademark of Anthropic, PBC.</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep = ms => new Promise(r => setTimeout(r, reduce ? Math.min(ms, 60) : ms));
+
+  // Nav border once the page scrolls
+  const nav = document.getElementById("nav");
+  const onScroll = () => nav.classList.toggle("scrolled", scrollY > 8);
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // The hero fades in on load, one line after another; the rest as it scrolls into view.
+  const reveals = [...document.querySelectorAll(".reveal")];
+  const hero = reveals.filter(el => el.closest(".hero"));
+  hero.forEach((el, i) => (el.style.transitionDelay = `${i * 70}ms`));
+  requestAnimationFrame(() => requestAnimationFrame(() => hero.forEach(el => el.classList.add("in"))));
+  const rest = reveals.filter(el => !el.closest(".hero"));
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    }, { rootMargin: "0px 0px -8% 0px" });
+    rest.forEach(el => io.observe(el));
+  } else {
+    rest.forEach(el => el.classList.add("in"));
+  }
+
+  // Copy buttons
+  document.querySelectorAll("[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const text = document.getElementById("install-cmd").innerText.replace(/^\$ /gm, "");
+      try { await navigator.clipboard.writeText(text); } catch {}
+      btn.textContent = "Copied";
+      setTimeout(() => (btn.textContent = "Copy"), 1600);
+    });
+  });
+
+  // FAQ: animate open and close
+  document.querySelectorAll("details").forEach(d => {
+    d.querySelector("summary").addEventListener("click", e => {
+      if (reduce) return;
+      e.preventDefault();
+      if (d.open) {
+        d.classList.add("closing");
+        setTimeout(() => { d.open = false; d.classList.remove("closing"); }, 330);
+      } else {
+        d.open = true;
+        requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add("opening")));
+        setTimeout(() => d.classList.remove("opening"), 360);
+      }
+    });
+  });
+
+  // The panel demo, mirroring the app's behaviour
+  const accounts = {
+    freelance: { name: "Freelance", email: "ada@studio.example", initials: "F", tint: "#af52de", last: "Last used yesterday" },
+    personal: { name: "Personal", email: "ada@example.org", initials: "P", tint: "#ff9500", last: "Last used 2 hours ago" },
+    work: { name: "Work", email: "ada@example.com", org: "Example Inc", initials: "W", tint: "#007aff", last: "Last used just now" },
+  };
+  const extra = [{ id: "client", name: "Client", email: "ada@client.example", initials: "C", tint: "#34c759", last: "Last used just now" }];
+  let current = "work", expanded = null, busy = false, signedOut = false, auto = !reduce;
+  // A click that lands mid-switch runs once the switch is done, so the demo never ignores one.
+  let queued = null;
+
+  const stage = document.getElementById("stage");
+  const panel = document.getElementById("panel");
+  const icon = document.getElementById("ourIcon");
+  const body = document.getElementById("pbody");
+  const list = document.getElementById("list");
+  const dot = document.getElementById("dot");
+  const status = document.getElementById("status");
+  const prAv = document.getElementById("prAv"), prTitle = document.getElementById("prTitle"), prSub = document.getElementById("prSub");
+  const stepsEl = document.getElementById("steps");
+
+  const plusSvg = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg>';
+  const checkSvg = '<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#007aff"/><path d="M4 7.2l2 1.9 4-4.3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  function detail(id) {
+    const a = accounts[id];
+    return id === current && !signedOut ? [a.email, a.org].filter(Boolean).join(" · ") : `${a.email} · ${a.last}`;
+  }
+
+  function render(enterId) {
+    const ids = Object.keys(accounts).sort((a, b) => accounts[a].name.localeCompare(accounts[b].name));
+    const currentName = signedOut ? "This account" : accounts[current].name;
+    let html = "";
+    if (signedOut) {
+      html += `<div class="notice"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="6"/><circle cx="7" cy="5.6" r="2"/><path d="M3.6 11.3c.7-1.5 1.9-2.2 3.4-2.2s2.7.7 3.4 2.2"/></svg><span>Claude is signed out. Sign in there to add an account, or switch to a saved one.</span></div>`;
+    }
+    for (const id of ids) {
+      const a = accounts[id];
+      html += `<div class="row${id === enterId ? " enter" : ""}" data-id="${id}">
+        <button class="row-main" type="button"><span class="av" style="--t:${a.tint}">${a.initials}</span>
+          <span class="row-text"><span class="row-name">${esc(a.name)}</span><span class="row-detail"></span></span>
+          <span class="row-end"><span class="pill">In use</span><span class="go">Switch</span></span></button>
+        <div class="confirm"><div><div class="confirm-inner">
+          <p>Claude restarts to switch. Anything running in it stops, and <b>${esc(currentName)}</b> stays signed in here.</p>
+          <div class="confirm-actions"><button class="b-out" type="button" data-act="cancel">Cancel</button><button class="b-fill" type="button" data-act="switch">Switch</button></div>
+        </div></div></div></div>`;
+    }
+    if (!signedOut && extra.length) {
+      html += `<div class="row" data-id="add">
+        <button class="row-main" type="button"><span class="av add">${plusSvg}</span>
+          <span class="row-text"><span class="row-name plain">Add another account</span></span></button>
+        <div class="confirm"><div><div class="confirm-inner">
+          <p>Claude restarts at the sign-in screen. Sign in there with the other account. <b>${esc(currentName)}</b> stays signed in here.</p>
+          <div class="confirm-actions"><button class="b-out" type="button" data-act="cancel">Cancel</button><button class="b-fill" type="button" data-act="switch">Continue</button></div>
+        </div></div></div></div>`;
+    }
+    list.innerHTML = html;
+    paint();
+  }
+
+  function paint() {
+    list.querySelectorAll(".row").forEach(row => {
+      const id = row.dataset.id;
+      row.classList.toggle("is-current", id === current && !signedOut);
+      row.classList.toggle("is-open", id === expanded);
+      const d = row.querySelector(".row-detail");
+      if (d) d.textContent = detail(id);
+    });
+  }
+
+  function setStatus(open) {
+    dot.classList.toggle("off", !open);
+    status.textContent = open ? (signedOut ? "Claude is open, signed out" : "Claude is open") : "Claude is closed";
+  }
+
+  function toggle(id) {
+    if (busy || (id === current && !signedOut)) return;
+    expanded = expanded === id ? null : id;
+    paint();
+  }
+
+  async function morph(change) {
+    const from = body.offsetHeight;
+    change();
+    const active = body.classList.contains("show-progress") ? body.querySelector(".progress") : list;
+    const to = active.offsetHeight;
+    body.style.height = from + "px";
+    void body.offsetHeight;
+    body.style.height = to + "px";
+    await sleep(400);
+    body.style.height = "";
+  }
+
+  function setSteps(labels, at) {
+    stepsEl.innerHTML = labels.map((l, i) =>
+      `<li class="${i < at ? "done" : i === at ? "active" : ""}"><span class="st">${checkSvg}</span><span>${esc(l)}</span></li>`).join("");
+  }
+  function advance(at) {
+    stepsEl.querySelectorAll("li").forEach((li, i) => { li.className = i < at ? "done" : i === at ? "active" : ""; });
+  }
+
+  async function run(target) {
+    if (busy) return;
+    busy = true;
+    expanded = null;
+    const adding = target === "add";
+    const leaving = signedOut ? null : accounts[current].name;
+    const t = adding ? null : accounts[target];
+    prAv.className = adding ? "av add" : "av";
+    prAv.innerHTML = adding ? plusSvg : t.initials;
+    if (!adding) prAv.style.setProperty("--t", t.tint);
+    prTitle.textContent = adding ? "Adding an account" : `Switching to ${t.name}`;
+    prSub.textContent = "Claude restarts to switch.";
+    const labels = ["Quit Claude", leaving ? `Save ${leaving}` : "Back up the current sign-in",
+      adding ? "Clear the sign-in" : `Sign in as ${t.name}`, adding ? "Open Claude at the sign-in screen" : "Open Claude"];
+    setSteps(labels, 0);
+    await morph(() => { paint(); body.classList.add("show-progress"); });
+    await sleep(950); setStatus(false); advance(1);
+    await sleep(480); advance(2);
+    await sleep(480); advance(3);
+    await sleep(750); advance(4); setStatus(true);
+    prTitle.textContent = adding ? "Ready for the other account" : `Signed in as ${t.name}`;
+    prSub.textContent = adding ? "Sign in to Claude with it." : "Claude is opening.";
+    if (leaving) accounts[current].last = "Last used just now";
+    await sleep(1250);
+    if (adding) {
+      signedOut = true;
+      setStatus(true);
+      await morph(() => { body.classList.remove("show-progress"); render(); });
+      await sleep(1500);
+      const next = extra.shift();
+      accounts[next.id] = next;
+      current = next.id;
+      signedOut = false;
+      setStatus(true);
+      await morph(() => render(next.id));
+    } else {
+      current = target;
+      signedOut = false;
+      setStatus(true);
+      await morph(() => { body.classList.remove("show-progress"); render(); });
+    }
+    busy = false;
+    if (queued) { const q = queued; queued = null; handle(q.id, q.act); }
+  }
+
+  function handle(id, act) {
+    if (act === "cancel") { expanded = null; paint(); return; }
+    if (act === "switch") { run(id); return; }
+    toggle(id);
+  }
+
+  list.addEventListener("click", e => {
+    const row = e.target.closest(".row");
+    if (!row) return;
+    stopAuto();
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (!act && !e.target.closest(".row-main")) return;
+    if (busy) { queued = { id: row.dataset.id, act }; return; }
+    handle(row.dataset.id, act);
+  });
+
+  // Keep the panel under the menu bar icon, the way the app places it
+  function place() {
+    const s = stage.getBoundingClientRect(), i = icon.getBoundingClientRect();
+    const w = panel.offsetWidth;
+    const center = i.left + i.width / 2 - s.left;
+    panel.style.left = Math.min(Math.max(center - w / 2, 12), s.width - w - 12) + "px";
+  }
+  addEventListener("resize", place);
+
+  let open = true;
+  function setOpen(v) { open = v; panel.classList.toggle("closed", !v); icon.classList.toggle("on", v); }
+  icon.addEventListener("click", () => { stopAuto(); setOpen(!open); });
+  icon.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); stopAuto(); setOpen(!open); } });
+  stage.addEventListener("click", e => { if (open && !panel.contains(e.target) && !icon.contains(e.target)) { stopAuto(); setOpen(false); } });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || !open) return;
+    if (expanded) { expanded = null; paint(); } else setOpen(false);
+  });
+
+  // A live clock, like a real menu bar
+  function tick() {
+    const d = new Date();
+    document.getElementById("clock").textContent =
+      d.toLocaleDateString("en-US", { weekday: "short" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/, "");
+  }
+  tick(); setInterval(tick, 15000);
+
+  // Plays itself until someone touches it
+  function stopAuto() {
+    if (!auto) return;
+    auto = false;
+    list.querySelectorAll(".is-hover").forEach(r => r.classList.remove("is-hover"));
+  }
+  stage.addEventListener("pointerdown", stopAuto);
+  panel.addEventListener("pointerenter", stopAuto);
+  stage.addEventListener("focusin", stopAuto);
+
+  async function autoplay() {
+    const plan = ["personal", "work"];
+    await sleep(1600);
+    for (let i = 0; auto; i++) {
+      const id = plan[i % plan.length];
+      const row = list.querySelector(`.row[data-id="${id}"]`);
+      if (!row) break;
+      row.classList.add("is-hover"); await sleep(700); if (!auto) break;
+      toggle(id); await sleep(1500); if (!auto) break;
+      const btn = row.querySelector('[data-act="switch"]');
+      btn.classList.add("is-pressed"); await sleep(170); btn.classList.remove("is-pressed");
+      row.classList.remove("is-hover");
+      if (!auto) break;
+      await run(id);
+      await sleep(2800);
+    }
+  }
+
+  render();
+  place();
+  const startWhenSeen = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { startWhenSeen.disconnect(); if (auto) autoplay(); }
+  }, { threshold: .5 });
+  startWhenSeen.observe(stage);
+})();
+</script>
+</body>
+</html>

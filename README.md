@@ -2,6 +2,8 @@
 
 A menu bar app that switches the Claude Mac app between accounts without signing out.
 
+Website: https://claude-account-switcher-phi.vercel.app
+
 Claude keeps one signed-in account at a time. Signing out ends that session on
 Anthropic's side, so switching means signing in again every time. Claude Accounts files
 away the current account's sign-in, puts the other account's in place and reopens Claude.
@@ -96,3 +98,9 @@ quits or touches the real Claude. It needs `node` and `sqlite3`.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The landing page is `docs/index.html`, deployed to Vercel (`vercel.json` serves only `docs/`). Pushes to main deploy it, and so does `npx vercel deploy --prod`. Preview it locally:
+
+```bash
+node scripts/serve-site.mjs
+```

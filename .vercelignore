@@ -1,0 +1,8 @@
+# Only the landing page in docs/ is deployed.
+.build/
+build/
+Sources/
+Resources/
+scripts/
+*.sh
+Package.swift
