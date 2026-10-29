@@ -13,11 +13,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Claude Account Switcher","description":"A menu bar app that switches the Claude Mac app between accounts without signing out.","operatingSystem":"macOS 14 or later","applicationCategory":"UtilitiesApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT","url":"https://claude-account-switcher-phi.vercel.app","sameAs":"https://github.com/realanshuman/claude-account-switcher"}
+</script>
 <style>
   :root {
     --bg: #ffffff;
+    --paper: #f6f4f0;
     --card: #f9f7f4;
-    --card-2: #f3f1ed;
     --ink: #08090b;
     --fg: #1b1d1f;
     --muted: #6f7473;
@@ -27,53 +30,33 @@
     --primary-hover: #2a2e33;
     --mac-blue: #007aff;
     --mac-green: #34c759;
-    --radius: 14px;
     --ease: cubic-bezier(.2, .9, .3, 1);
     --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --mac: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--sans);
     color-scheme: light;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-    font: 16px/1.6 var(--sans);
-    font-feature-settings: "cv11", "ss01";
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   a { color: inherit; text-decoration: none; }
   button { font: inherit; color: inherit; }
-  code, kbd { font-family: var(--mono); font-size: .88em; }
+  code { font-family: var(--mono); font-size: .88em; }
+  h1, h2, .lede, .sub { text-wrap: balance; }
+  p { text-wrap: pretty; }
   .wrap { width: min(1080px, 100% - 32px); margin: 0 auto; }
 
   /* Nav */
-  .nav {
-    position: sticky; top: 0; z-index: 20;
-    background: rgba(255, 255, 255, .86);
-    backdrop-filter: saturate(1.4) blur(14px);
-    -webkit-backdrop-filter: saturate(1.4) blur(14px);
-    border-bottom: 1px solid transparent;
-    transition: border-color .25s ease;
-  }
+  .nav { position: sticky; top: 0; z-index: 30; background: rgba(255, 255, 255, .86); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid transparent; transition: border-color .25s ease; }
   .nav.scrolled { border-bottom-color: var(--line); }
   .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
   .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; color: var(--ink); }
   .brand svg { width: 24px; height: 24px; flex: none; }
-  .nav-links { display: flex; align-items: center; gap: 6px; }
+  .nav-links { display: flex; align-items: center; gap: 4px; }
   .nav-links a.link { padding: 6px 10px; border-radius: 8px; font-size: 14px; color: var(--muted); transition: color .2s, background .2s; }
   .nav-links a.link:hover { color: var(--ink); background: var(--card); }
 
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    height: 40px; padding: 0 16px; border-radius: 10px;
-    font-size: 14px; font-weight: 500; letter-spacing: -.005em;
-    border: 1px solid var(--line-2); background: var(--bg); color: var(--ink);
-    cursor: pointer; white-space: nowrap;
-    transition: background .2s, border-color .2s, transform .2s var(--ease);
-  }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 500; border: 1px solid var(--line-2); background: var(--bg); color: var(--ink); cursor: pointer; white-space: nowrap; transition: background .2s, border-color .2s, transform .2s var(--ease); }
   .btn:hover { background: var(--card); border-color: #d2d0ca; }
   .btn:active { transform: scale(.98); }
   .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
@@ -81,59 +64,40 @@
   .btn.small { height: 34px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
   .btn svg { width: 16px; height: 16px; flex: none; }
 
+  /* Pixel scenes: painted by the script into a canvas behind the content */
+  [data-scene] { position: relative; overflow: hidden; isolation: isolate; background: #9cc4f1; }
+  [data-scene="morning"] { background: #d9c3c8; }
+  [data-scene="dusk"] { background: #8a6aa6; }
+  [data-scene="golden"] { background: #c9c3c8; }
+  .js [data-scene] { background: transparent; }
+  canvas.scene { position: absolute; left: 0; top: 0; z-index: -1; image-rendering: pixelated; image-rendering: crisp-edges; pointer-events: none; }
+
   /* Hero */
-  .hero { padding: 76px 0 40px; text-align: center; }
-  .tag {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 5px 12px 5px 6px; border: 1px solid var(--line); border-radius: 999px;
-    font-size: 13px; color: var(--muted); background: var(--bg);
-  }
-  .tag b { font-weight: 500; color: var(--ink); background: var(--card-2); border-radius: 999px; padding: 1px 8px; }
-  h1, h2, .lede, .sub { text-wrap: balance; }
-  p { text-wrap: pretty; }
-  h1 {
-    margin: 22px auto 0; max-width: 820px;
-    font-size: clamp(40px, 6.4vw, 70px); line-height: 1.02; letter-spacing: -.045em;
-    font-weight: 600; color: var(--ink);
-  }
-  .lede { margin: 22px auto 0; max-width: 560px; font-size: clamp(17px, 2vw, 19px); line-height: 1.55; color: var(--muted); }
-  .cta { margin-top: 32px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .fine { margin-top: 18px; font-size: 13px; color: var(--faint); }
+  .hero { padding: 72px 0 0; text-align: center; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--muted); }
+  .tag b { font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
+  h1 { margin: 22px auto 0; max-width: 820px; font-size: clamp(40px, 6.4vw, 70px); line-height: 1.02; letter-spacing: -.045em; font-weight: 600; color: var(--ink); }
+  .lede { margin: 20px auto 0; max-width: 540px; font-size: clamp(17px, 2vw, 19px); line-height: 1.55; color: var(--muted); }
+  .cta { margin-top: 30px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .fine { margin-top: 16px; font-size: 13px; color: var(--faint); }
   .fine span + span::before { content: "·"; margin: 0 8px; }
 
-  /* Stage: the real panel, redrawn */
-  .stage-wrap { margin: 56px auto 0; width: min(940px, 100%); }
-  .stage {
-    position: relative; height: 500px; border-radius: 20px; overflow: hidden;
-    background: var(--card); border: 1px solid var(--line);
-    text-align: left;
-  }
-  .menubar {
-    position: absolute; inset: 0 0 auto 0; height: 34px;
-    display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 18px;
-    background: rgba(255, 255, 255, .72); border-bottom: 1px solid var(--line);
-    font-size: 13px; color: #2b2d30;
-  }
-  .menubar .left { display: flex; gap: 18px; align-items: center; }
-  .menubar .left b { font-weight: 600; }
-  .menubar .left span { color: #4a4d50; }
-  .menubar .right { display: flex; align-items: center; gap: 4px; }
-  .mb-item { display: grid; place-items: center; height: 24px; min-width: 28px; padding: 0 5px; border-radius: 6px; color: #2b2d30; }
-  .mb-item svg { width: 16px; height: 16px; }
-  .mb-item.time { font-variant-numeric: tabular-nums; padding: 0 6px; }
-  .mb-item.ours { cursor: pointer; transition: background .2s; }
-  .mb-item.ours.on { background: rgba(0, 0, 0, .09); }
-  .stage-hint { margin-top: 14px; text-align: center; font-size: 13px; color: var(--faint); }
+  .stage { position: relative; margin-top: 52px; height: 600px; border-radius: 24px; overflow: hidden; isolation: isolate; text-align: left; background: #d9c58f url(assets/hero.jpg) center / cover no-repeat; }
+  /* ?hero=pixel: the same photo drawn as pixel art, melting into the page at the bottom */
+  .stage.as-pixels { background: none; border-radius: 24px 24px 0 0; }
+  canvas.photo-px { position: absolute; left: 0; top: 0; z-index: -1; image-rendering: pixelated; image-rendering: crisp-edges; pointer-events: none; }
+  .stage-center { position: absolute; left: 50%; top: 40px; width: 320px; height: 384px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+  .stage-hint { margin: 14px 0 0; text-align: center; font-size: 13px; color: var(--faint); }
 
-  .panel {
-    position: absolute; top: 42px; left: 0; width: min(320px, calc(100% - 24px));
-    background: rgba(255, 255, 255, .96); border-radius: 12px;
-    border: .5px solid rgba(0, 0, 0, .14);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 12px 32px rgba(0, 0, 0, .10);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--sans);
-    color: #1d1d1f; transform-origin: top center;
-    transition: opacity .22s ease, transform .3s var(--ease);
-  }
+  .bar { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 0 6px; border-radius: 9px; background: rgba(255, 255, 255, .94); border: .5px solid rgba(0, 0, 0, .12); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 6px 18px rgba(0, 0, 0, .06); font: 12.5px var(--mac); color: #2b2d30; }
+  .bar-item { display: grid; place-items: center; height: 22px; min-width: 26px; padding: 0 4px; border-radius: 5px; }
+  .bar-item svg { width: 15px; height: 15px; }
+  .bar-item.time { font-variant-numeric: tabular-nums; padding: 0 6px; }
+  .bar-item.ours { cursor: pointer; transition: background .2s; }
+  .bar-item.ours.on { background: rgba(0, 0, 0, .1); }
+
+  /* The app's panel, redrawn */
+  .panel { margin-top: 8px; width: min(320px, calc(100vw - 48px)); background: #fff; border-radius: 12px; border: .5px solid rgba(0, 0, 0, .14); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 14px 36px rgba(0, 0, 0, .10); font-family: var(--mac); color: #1d1d1f; transform-origin: top center; transition: opacity .22s ease, transform .3s var(--ease); }
   .panel.closed { opacity: 0; transform: translateY(-6px) scale(.985); pointer-events: none; }
   .p-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: .5px solid rgba(0, 0, 0, .09); }
   .p-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
@@ -144,31 +108,25 @@
   .p-more svg { width: 14px; height: 14px; }
   .p-body { position: relative; overflow: hidden; transition: height .38s var(--ease); }
   .view { padding: 6px; transition: opacity .14s ease, transform .3s var(--ease); }
-  /* The view going out fades first, then the one coming in, so their text never overlaps. */
-  .p-body.show-progress .view.progress, .p-body:not(.show-progress) .view.accounts { transition: opacity .24s ease .14s, transform .36s var(--ease) .1s; }
   .view.accounts { position: relative; }
   .view.progress { position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(6px); pointer-events: none; padding: 14px; }
   .p-body.show-progress .view.accounts { position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(-6px); pointer-events: none; }
   .p-body.show-progress .view.progress { position: relative; opacity: 1; transform: none; pointer-events: auto; }
+  /* The view going out fades first, then the one coming in, so their text never overlaps. */
+  .p-body.show-progress .view.progress, .p-body:not(.show-progress) .view.accounts { transition: opacity .24s ease .14s, transform .36s var(--ease) .1s; }
 
   .row { border-radius: 8px; transition: background .15s ease; }
   .row.enter { animation: rowIn .45s var(--ease) both; }
   @keyframes rowIn { from { opacity: 0; transform: translateY(-6px); } }
-  .row-main {
-    width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 8px;
-    background: none; border: 0; text-align: left; cursor: pointer; border-radius: 8px;
-  }
+  .row-main { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 8px; background: none; border: 0; text-align: left; cursor: pointer; border-radius: 8px; }
   .row:not(.is-current):hover, .row.is-hover, .row.is-open { background: rgba(0, 0, 0, .05); }
   .row.is-current .row-main { cursor: default; }
-  .av {
-    flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
-    font-size: 11px; font-weight: 600; color: var(--t, #007aff);
-    background: color-mix(in srgb, var(--t, #007aff) 15%, transparent);
-  }
+  .av { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font: 600 11px var(--mac); color: var(--t, #007aff); background: color-mix(in srgb, var(--t, #007aff) 15%, transparent); }
   .av.add { color: #86868b; background: none; border: 1px solid rgba(0, 0, 0, .16); }
   .av.add svg { width: 12px; height: 12px; }
   .row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .row-name { font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-name.plain { font-weight: 400; }
   .row-detail { font-size: 11px; color: #86868b; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row-end { flex: none; display: flex; align-items: center; }
   .pill { display: none; font-size: 11px; font-weight: 500; color: #86868b; padding: 1px 7px; border-radius: 999px; border: .5px solid rgba(0, 0, 0, .2); }
@@ -176,19 +134,14 @@
   .go { font-size: 12px; font-weight: 500; color: var(--mac-blue); opacity: 0; transition: opacity .15s; }
   .row:not(.is-current):not(.is-open):hover .go, .row.is-hover:not(.is-open) .go { opacity: 1; }
   .row.is-current .go { display: none; }
-  .row-name.plain { font-weight: 400; }
-
-  .confirm { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .36s var(--ease), opacity .25s ease; opacity: 0; }
+  .confirm { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .36s var(--ease), opacity .25s ease; }
   .row.is-open .confirm { grid-template-rows: 1fr; opacity: 1; }
   .confirm > div { overflow: hidden; }
   .confirm-inner { padding: 0 8px 10px 46px; }
   .confirm p { margin: 0 0 10px; font-size: 12px; line-height: 1.45; color: #6e6e73; }
   .confirm p b { font-weight: 500; color: #1d1d1f; }
   .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .b-out, .b-fill {
-    height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
-    transition: opacity .15s, background .15s, transform .15s;
-  }
+  .b-out, .b-fill { height: 24px; padding: 0 10px; border-radius: 6px; font: 500 12px var(--mac); cursor: pointer; transition: opacity .15s, background .15s, transform .15s; }
   .b-out { background: rgba(0, 0, 0, .03); border: .5px solid rgba(0, 0, 0, .18); color: #1d1d1f; }
   .b-out:hover { background: rgba(0, 0, 0, .07); }
   .b-fill { background: var(--mac-blue); border: 0; color: #fff; padding: 0 12px; }
@@ -196,7 +149,6 @@
   .b-fill.is-pressed, .b-fill:active { opacity: .78; transform: scale(.97); }
   .notice { display: flex; gap: 8px; margin: 0 0 4px; padding: 10px; border: .5px solid rgba(0, 0, 0, .14); border-radius: 8px; font-size: 12px; line-height: 1.45; }
   .notice svg { flex: none; width: 13px; height: 13px; margin-top: 2px; color: #86868b; }
-
   .pr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .pr-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
   .pr-sub { font-size: 11px; color: #86868b; line-height: 1.4; }
@@ -213,120 +165,150 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Sections */
-  section.block { padding: 96px 0 0; scroll-margin-top: 24px; }
-  section.block .label { scroll-margin-top: 80px; }
+  section.block { padding: 120px 0 0; scroll-margin-top: 20px; }
+  .head { text-align: center; }
   .label { display: inline-block; font-size: 14px; font-weight: 500; color: var(--muted); margin-bottom: 12px; }
-  h2 { margin: 0; font-size: clamp(30px, 4vw, 42px); line-height: 1.1; letter-spacing: -.035em; font-weight: 600; color: var(--ink); max-width: 720px; }
-  .sub { margin: 14px 0 0; max-width: 600px; color: var(--muted); font-size: 17px; }
-  .head-center { text-align: center; }
-  .head-center h2, .head-center .sub { margin-left: auto; margin-right: auto; }
+  h2 { margin: 0 auto; font-size: clamp(30px, 4.2vw, 44px); line-height: 1.08; letter-spacing: -.038em; font-weight: 600; color: var(--ink); max-width: 720px; }
+  .sub { margin: 14px auto 0; max-width: 560px; color: var(--muted); font-size: 17px; }
 
-  .steps-row { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .step-card { padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
-  .num { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--card-2); font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .step-card h3, .feat h3 { margin: 18px 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -.015em; color: var(--ink); }
-  .step-card p, .feat p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
+  /* How it works: three tiles, each a dithered field with one piece of the panel in its calm centre */
+  .tiles { margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .tile { border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--bg); }
+  .tile-art { height: 320px; display: grid; place-items: start center; padding-top: 34px; border-bottom: 1px solid var(--line); }
+  .tile-text { padding: 22px 24px 26px; }
+  .tile h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+  .tile p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
 
-  .feats { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-  .feat { padding: 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); transition: background .25s; }
-  .feat:hover { background: var(--card); }
-  .feat:nth-child(3n) { border-right: 0; }
-  .feat:nth-last-child(-n + 3) { border-bottom: 0; }
-  .icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
-  .icon svg { width: 18px; height: 18px; }
-  .feat code { background: var(--card-2); padding: 1px 5px; border-radius: 5px; color: var(--fg); }
+  .mini { position: relative; width: 236px; padding: 6px; background: #fff; border-radius: 12px; border: .5px solid rgba(0, 0, 0, .14); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 10px 28px rgba(0, 0, 0, .09); font-family: var(--mac); color: #1d1d1f; pointer-events: none; }
+  .m-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; }
+  .m-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .m-text b { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .m-text b.plain { font-weight: 400; }
+  .m-text i { font-style: normal; font-size: 11px; color: #86868b; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-pill { font-size: 11px; font-weight: 500; color: #86868b; padding: 1px 7px; border-radius: 999px; border: .5px solid rgba(0, 0, 0, .2); }
+  .m-open { background: rgba(0, 0, 0, .05); border-radius: 8px; }
+  .m-confirm { padding: 0 8px 8px 46px; }
+  .m-confirm p { margin: 0 0 10px; font-size: 12px; line-height: 1.45; color: #6e6e73; }
+  .m-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .m-actions span { display: inline-grid; place-items: center; }
+  .m-prog { padding: 14px; }
+  .m-prog .pr-head { margin-bottom: 12px; }
+  .m-swap { display: grid; }
+  .m-swap > span { grid-area: 1 / 1; }
+  .cursor { position: absolute; width: 16px; height: 22px; z-index: 2; opacity: 0; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .2)); }
 
-  .swap { margin-top: 44px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
-  .swap-card { padding: 28px; border-radius: var(--radius); border: 1px solid var(--line); }
-  .swap-card.soft { background: var(--card); }
-  .swap-card h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; letter-spacing: -.015em; color: var(--ink); }
-  .swap-card > p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
-  .list { list-style: none; margin: 0; padding: 0; }
-  .list li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
-  .swap-card.soft .list li { border-top-color: var(--line-2); }
-  .list li:first-child { border-top: 0; }
-  .list li.top { align-items: flex-start; }
-  .list li.top .tick { margin-top: 3px; }
-  .list code { color: var(--ink); }
-  .list .k { margin-left: auto; font-size: 12.5px; color: var(--faint); }
-  .tick, .cross { flex: none; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; }
-  .tick { background: var(--ink); color: #fff; }
-  .cross { border: 1px solid var(--line-2); color: var(--muted); }
-  .tick svg, .cross svg { width: 10px; height: 10px; }
-  .keys { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
-  .keys code { font-size: 12px; padding: 3px 7px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line-2); }
-  .note { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-2); font-size: 14px; color: var(--muted); }
+  .tile.play .t-add .cursor, .tile.play .t-switch .cursor { animation: cursorIn 4.6s var(--ease) infinite; }
+  .tile.play .t-add .m-add { animation: rowLit 4.6s ease infinite; }
+  .tile.play .t-switch .b-fill { animation: press 4.6s ease infinite; }
+  @keyframes cursorIn { 0% { opacity: 0; transform: translate(46px, 40px); } 12% { opacity: 1; } 38% { transform: translate(0, 0); } 44% { transform: translate(0, 0) scale(.86); } 50%, 82% { opacity: 1; transform: translate(0, 0); } 94%, 100% { opacity: 0; transform: translate(0, 0); } }
+  @keyframes rowLit { 0%, 42% { background: transparent; } 48%, 84% { background: rgba(0, 0, 0, .05); } 96%, 100% { background: transparent; } }
+  @keyframes press { 0%, 42% { opacity: 1; transform: none; } 45% { opacity: .75; transform: scale(.95); } 52%, 100% { opacity: 1; transform: none; } }
+  .t-back .steps li { color: #1d1d1f; }
+  .t-back .done-t { opacity: 0; }
+  .tile.play .t-back .st svg { animation: tickIn 4.6s var(--ease) infinite both; }
+  .tile.play .t-back .st::before { animation: ringOut 4.6s ease infinite both; }
+  .tile.play .t-back li:nth-child(2) .st svg, .tile.play .t-back li:nth-child(2) .st::before { animation-delay: .35s; }
+  .tile.play .t-back li:nth-child(3) .st svg, .tile.play .t-back li:nth-child(3) .st::before { animation-delay: .7s; }
+  .tile.play .t-back li:nth-child(4) .st svg, .tile.play .t-back li:nth-child(4) .st::before { animation-delay: 1.05s; }
+  .tile.play .t-back .run-t { animation: swapOut 4.6s ease infinite; }
+  .tile.play .t-back .done-t { animation: swapIn 4.6s ease infinite; }
+  @keyframes tickIn { 0%, 6% { opacity: 0; transform: scale(.6); } 14%, 86% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: scale(.6); } }
+  @keyframes ringOut { 0%, 6% { opacity: 1; } 14%, 86% { opacity: 0; } 96%, 100% { opacity: 1; } }
+  @keyframes swapOut { 0%, 34% { opacity: 1; } 40%, 90% { opacity: 0; } 98%, 100% { opacity: 1; } }
+  @keyframes swapIn { 0%, 34% { opacity: 0; } 40%, 90% { opacity: 1; } 98%, 100% { opacity: 0; } }
 
-  .install { margin-top: 44px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; align-items: start; }
-  .req { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); }
-  .req h3 { margin: 0 0 14px; font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -.015em; }
-  .req .list li { font-size: 14.5px; }
-  .terminal { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--bg); }
-  .term-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+  /* Privacy: a receipt for one switch */
+  .privacy { margin-top: 0; display: grid; grid-template-columns: 1.05fr 1fr; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+  .priv-art { min-height: 580px; display: grid; place-items: start center; padding-top: 44px; border-right: 1px solid var(--line); }
+  .priv-text { padding: 56px 52px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+  .priv-text h2 { margin: 0; max-width: 420px; }
+  .priv-text .sub { margin: 16px 0 0; }
+  .facts { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 16px; }
+  .facts li { display: flex; gap: 12px; align-items: flex-start; font-size: 15.5px; font-weight: 500; color: var(--ink); line-height: 1.45; }
+  .facts li span.note { display: block; font-weight: 400; color: var(--muted); font-size: 14.5px; }
+  .tick { flex: none; width: 20px; height: 20px; margin-top: 1px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: #fff; }
+  .tick svg { width: 10px; height: 10px; }
+  .more { margin-top: 30px; display: inline-flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 500; color: var(--ink); }
+  .more:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .receipt { position: relative; width: 300px; padding: 22px 22px 30px; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 16px 40px rgba(0, 0, 0, .09); font-size: 13px; color: #1d1d1f;
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+            mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%; }
+  .rc-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .rc-head b { font-size: 14px; font-weight: 600; }
+  .rc-head span, .rc-sub { color: var(--faint); font-variant-numeric: tabular-nums; }
+  .rc-sub { margin-top: 2px; font-size: 12px; }
+  .rc-sep { margin: 14px 0; border-top: 1px dashed #d9d6cf; }
+  .rc-line { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  .rc-line span:first-child { color: var(--muted); }
+  .rc-line span:last-child { font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .rc-foot { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .rc-foot .tick { width: 18px; height: 18px; margin: 0; }
+
+  /* Install */
+  .install { margin-top: 48px; display: grid; grid-template-columns: 1fr 1.35fr; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+  .inst-text { padding: 40px; }
+  .inst-text h3 { margin: 0 0 8px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+  .inst-text p { margin: 0; color: var(--muted); font-size: 15px; }
+  .needs { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .needs span { font-size: 13px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 999px; color: var(--fg); }
+  .needs code { font-size: 12px; }
+  .terminal { border-left: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; min-width: 0; }
+  .term-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 12px 20px; border-bottom: 1px solid var(--line); }
   .term-bar span { font-size: 13px; color: var(--muted); }
-  .term-body { padding: 18px 20px; font-family: var(--mono); font-size: 13.5px; line-height: 1.9; color: var(--fg); overflow-x: auto; white-space: pre; }
+  .term-body { flex: 1; padding: 22px 24px; font-family: var(--mono); font-size: 13.5px; line-height: 2; color: var(--fg); overflow-x: auto; white-space: pre; }
   .term-body .p { color: var(--faint); user-select: none; }
-  .term-body .c { color: var(--faint); }
-  .term-foot { padding: 14px 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 
+  /* FAQ */
   .faq { margin: 44px auto 0; max-width: 760px; border-top: 1px solid var(--line); }
   details { border-bottom: 1px solid var(--line); }
-  summary {
-    list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 20px 2px; font-size: 16.5px; font-weight: 500; color: var(--ink); letter-spacing: -.01em;
-  }
+  summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 2px; font-size: 16.5px; font-weight: 500; color: var(--ink); letter-spacing: -.01em; }
   summary::-webkit-details-marker { display: none; }
-  summary .plus { flex: none; position: relative; width: 14px; height: 14px; color: var(--muted); transition: transform .3s var(--ease); }
-  summary .plus::before, summary .plus::after { content: ""; position: absolute; inset: 6px 0 auto; height: 1.6px; border-radius: 2px; background: currentColor; }
-  summary .plus::after { transform: rotate(90deg); transition: transform .3s var(--ease); }
-  details[open] summary .plus::after { transform: rotate(0); }
+  .plus { flex: none; position: relative; width: 14px; height: 14px; color: var(--muted); }
+  .plus::before, .plus::after { content: ""; position: absolute; inset: 6px 0 auto; height: 1.6px; border-radius: 2px; background: currentColor; }
+  .plus::after { transform: rotate(90deg); transition: transform .3s var(--ease); }
+  details[open] .plus::after { transform: rotate(0); }
   .answer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
   .answer > div { overflow: hidden; }
   .answer p { margin: 0 0 20px; color: var(--muted); font-size: 15.5px; max-width: 640px; }
-  .answer code { background: var(--card-2); padding: 1px 5px; border-radius: 5px; color: var(--fg); }
   details.opening .answer, details[open]:not(.closing) .answer { grid-template-rows: 1fr; }
 
-  .final { margin: 112px 0 0; padding: 64px 24px; text-align: center; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
-  .final h2 { margin: 0 auto; }
-  .final .sub { margin: 14px auto 0; }
+  /* Closing banner: the logo crisp in a dithered field */
+  .final { margin-top: 128px; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; text-align: center; }
+  .final-art { height: 300px; display: grid; place-items: center; border-bottom: 1px solid var(--line); }
+  .final-mark { width: 64px; height: 64px; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .16)); }
+  .final-inner { padding: 48px 24px 56px; }
+  .final .sub { margin-top: 12px; }
 
   footer { margin-top: 72px; border-top: 1px solid var(--line); }
   footer .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 28px 0 36px; flex-wrap: wrap; }
   footer .brand { font-size: 14px; }
   footer .brand svg { width: 20px; height: 20px; }
-  .foot-links { display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  .foot-links { display: flex; gap: 18px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
   .foot-links a:hover { color: var(--ink); }
   .legal { width: 100%; margin: 0; font-size: 12.5px; color: var(--faint); }
 
-  /* Reveal */
-  /* Only hidden once the script runs, so the page reads fine without it. */
-  .js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .7s ease, transform .8s var(--ease); }
-  .js .reveal.in { opacity: 1; transform: none; }
 
-  @media (max-width: 880px) {
-    .steps-row, .swap, .install { grid-template-columns: 1fr; }
-    .feats { grid-template-columns: 1fr 1fr; }
-    .feat:nth-child(3n) { border-right: 1px solid var(--line); }
-    .feat:nth-child(2n) { border-right: 0; }
-    .feat:nth-last-child(-n + 3) { border-bottom: 1px solid var(--line); }
-    .feat:nth-last-child(-n + 2) { border-bottom: 0; }
+  @media (max-width: 920px) {
+    .tiles { grid-template-columns: 1fr; max-width: 520px; margin-left: auto; margin-right: auto; }
+    .privacy, .install { grid-template-columns: 1fr; }
+    .priv-art { border-right: 0; border-bottom: 1px solid var(--line); min-height: 520px; }
+    .priv-text { padding: 36px 28px 40px; }
+    .terminal { border-left: 0; border-top: 1px solid var(--line); }
   }
   @media (max-width: 640px) {
     .nav-links a.link { display: none; }
-    .hero { padding-top: 52px; }
-    .stage { height: 410px; }
-    .menubar .left span, .mb-item.hide-sm { display: none; }
-    .feats { grid-template-columns: 1fr; }
-    .feat, .feat:nth-child(3n), .feat:nth-child(2n) { border-right: 0; border-bottom: 1px solid var(--line); }
-    .feat:last-child { border-bottom: 0; }
-    section.block { padding-top: 72px; }
-    .final { padding: 48px 20px; margin-top: 88px; }
-    .list .k { display: none; }
+    .hero { padding-top: 48px; }
+    .stage { height: 540px; margin-top: 40px; }
+    .stage-center { top: 28px; }
+    section.block { padding-top: 88px; }
+    .inst-text { padding: 28px; }
+    .final { margin-top: 96px; }
+    .final-art { height: 220px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
+    *, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
     html { scroll-behavior: auto; }
-    .js .reveal { opacity: 1; transform: none; }
   }
 </style>
 </head>
@@ -336,7 +318,9 @@
   <symbol id="mark" viewBox="0 0 24 24"><rect width="24" height="24" rx="7" fill="#08090b"/><circle cx="9.6" cy="12" r="4.2" fill="#fff"/><circle cx="14.4" cy="12" r="4.2" fill="none" stroke="#fff" stroke-width="1.6"/></symbol>
   <symbol id="github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></symbol>
   <symbol id="check" viewBox="0 0 12 12"><path d="M2.5 6.3l2.3 2.2 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <symbol id="x" viewBox="0 0 12 12"><path d="M3.5 3.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="tickfill" viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#007aff"/><path d="M4 7.2l2 1.9 4-4.3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="plus" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="cursor" viewBox="0 0 16 22"><path d="M1.5 1.5v16.2l4.2-3.9 2.9 6.5 2.7-1.2-2.9-6.4h5.9z" fill="#111" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></symbol>
 </svg>
 
 <header class="nav" id="nav">
@@ -355,150 +339,151 @@
 <main id="top">
   <section class="hero">
     <div class="wrap">
-      <span class="tag reveal"><b>Free</b>Open source menu bar app for macOS</span>
-      <h1 class="reveal">Switch Claude accounts without signing out.</h1>
-      <p class="lede reveal">Keep your work and personal accounts signed in on the Claude Mac app, and move between them in one click from the menu bar.</p>
-      <div class="cta reveal">
+      <span class="tag"><b>Free</b>Open source menu bar app for macOS</span>
+      <h1>Switch Claude accounts without signing out.</h1>
+      <p class="lede">Keep every Claude account signed in on your Mac, and move between them from the menu bar in one click.</p>
+      <div class="cta">
         <a class="btn primary" href="#install">Install on your Mac</a>
         <a class="btn" href="https://github.com/realanshuman/claude-account-switcher"><svg><use href="#github"/></svg>View on GitHub</a>
       </div>
-      <p class="fine reveal"><span>macOS 14 or later</span><span>MIT licensed</span><span>Not affiliated with Anthropic</span></p>
+      <p class="fine"><span>macOS 14 or later</span><span>MIT licensed</span><span>Not affiliated with Anthropic</span></p>
 
-      <div class="stage-wrap reveal">
-        <div class="stage" id="stage">
-          <div class="menubar">
-            <div class="left"><b>Finder</b><span>File</span><span>Edit</span><span>View</span><span>Window</span></div>
-            <div class="right">
-              <span class="mb-item ours on" id="ourIcon" title="Claude Account Switcher" role="button" tabindex="0" aria-label="Show or hide the accounts panel">
+      <div>
+        <div class="stage" id="stage" data-image="assets/hero.jpg">
+          <canvas class="photo-px"></canvas>
+          <div class="stage-center">
+            <div class="bar">
+              <span class="bar-item ours on" id="ourIcon" role="button" tabindex="0" aria-label="Show or hide the accounts panel">
                 <svg viewBox="0 0 16 16"><circle cx="6" cy="8" r="4.1" fill="currentColor"/><circle cx="10" cy="8" r="4.1" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
               </span>
-              <span class="mb-item hide-sm"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2l3 3" stroke-linecap="round"/></svg></span>
-              <span class="mb-item"><svg viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="4" width="16" height="8" rx="2.4"/><rect x="3" y="5.5" width="10.5" height="5" rx="1.2" fill="currentColor" stroke="none"/><path d="M19.5 6.6v2.8" stroke-linecap="round" stroke-width="1.6"/></svg></span>
-              <span class="mb-item hide-sm"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3.5" width="5.2" height="3.6" rx="1.8"/><rect x="8.8" y="3.5" width="5.2" height="3.6" rx="1.8"/><rect x="2" y="8.9" width="5.2" height="3.6" rx="1.8"/><rect x="8.8" y="8.9" width="5.2" height="3.6" rx="1.8"/></svg></span>
-              <span class="mb-item time" id="clock">Tue 9:41</span>
+              <span class="bar-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2l3 3" stroke-linecap="round"/></svg></span>
+              <span class="bar-item"><svg viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="4" width="16" height="8" rx="2.4"/><rect x="3" y="5.5" width="10.5" height="5" rx="1.2" fill="currentColor" stroke="none"/><path d="M19.5 6.6v2.8" stroke-linecap="round" stroke-width="1.6"/></svg></span>
+              <span class="bar-item time" id="clock">Tue 9:41</span>
             </div>
-          </div>
-
-          <div class="panel" id="panel" aria-label="Claude Account Switcher panel, a working demo">
-            <div class="p-head">
-              <div>
-                <div class="p-title">Claude accounts</div>
-                <div class="p-status"><i class="dot" id="dot"></i><span id="status">Claude is open</span></div>
-              </div>
-              <span class="p-more"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></span>
-            </div>
-            <div class="p-body" id="pbody">
-              <div class="view accounts" id="list"></div>
-              <div class="view progress" aria-live="polite">
-                <div class="pr-head">
-                  <span class="av" id="prAv"></span>
-                  <div><div class="pr-title" id="prTitle"></div><div class="pr-sub" id="prSub"></div></div>
+            <div class="panel" id="panel" aria-label="Claude Account Switcher panel, a working demo">
+              <div class="p-head">
+                <div>
+                  <div class="p-title">Claude accounts</div>
+                  <div class="p-status"><i class="dot" id="dot"></i><span id="status">Claude is open</span></div>
                 </div>
-                <ol class="steps" id="steps"></ol>
+                <span class="p-more"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></span>
+              </div>
+              <div class="p-body" id="pbody">
+                <div class="view accounts" id="list"></div>
+                <div class="view progress" aria-live="polite">
+                  <div class="pr-head">
+                    <span class="av" id="prAv"></span>
+                    <div><div class="pr-title" id="prTitle"></div><div class="pr-sub" id="prSub"></div></div>
+                  </div>
+                  <ol class="steps" id="steps"></ol>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <p class="stage-hint">This is the app's panel, redrawn for the web. Click an account to try a switch.</p>
+        <p class="stage-hint">The app's panel, redrawn for the web. Click an account to try a switch.</p>
       </div>
     </div>
   </section>
 
   <section class="block" id="how">
     <div class="wrap">
-      <div class="reveal">
+      <div class="head">
         <span class="label">How it works</span>
-        <h2>Every account stays signed in. You pick which one Claude uses.</h2>
-        <p class="sub">Claude keeps one account at a time, and signing out ends that session for good. The switcher files away the one you're leaving instead, so coming back is one click.</p>
+        <h2>Set up once. Switch whenever.</h2>
+        <p class="sub">Every account stays signed in. You only choose which one Claude uses.</p>
       </div>
-      <div class="steps-row">
-        <div class="step-card reveal">
-          <span class="num">1</span>
-          <h3>Add your accounts</h3>
-          <p>Choose Add another account. Claude opens at its sign-in screen, you sign in with the other account, and both stay in the list.</p>
-        </div>
-        <div class="step-card reveal">
-          <span class="num">2</span>
-          <h3>Click to switch</h3>
-          <p>Pick an account and confirm. Claude quits, the account you're leaving is saved on your Mac, and the other one is put in place.</p>
-        </div>
-        <div class="step-card reveal">
-          <span class="num">3</span>
-          <h3>Back in seconds</h3>
-          <p>Claude opens again, signed in as the account you picked. Your Code sessions and projects are waiting under each account.</p>
-        </div>
-      </div>
-
-      <div class="feats">
-        <div class="feat reveal">
-          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.2"/><path d="M6.8 10.2l2.2 2.1 4.2-4.6"/></svg></span>
-          <h3>Nobody gets signed out</h3>
-          <p>Signing out of Claude ends the session. The switcher never does it, so every account is ready the moment you come back.</p>
-        </div>
-        <div class="feat reveal">
-          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="13" height="9" rx="1.6"/><path d="M1.8 16h16.4"/></svg></span>
-          <h3>Stays on your Mac</h3>
-          <p>No servers, no sign-up, no analytics. Sign-ins are copied between folders on your Mac and nothing is sent anywhere.</p>
-        </div>
-        <div class="feat reveal">
-          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5l1.4 1.4L7 4.3M3 11.5l1.4 1.4L7 10.3"/><path d="M10 5.6h7M10 11.6h7M10 16.6h7"/></svg></span>
-          <h3>Shows every step</h3>
-          <p>Quit, save, sign in, open. If Claude asks whether to quit, the panel tells you, and Cancel leaves everything as it was.</p>
-        </div>
-        <div class="feat reveal">
-          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 6.2c0-1 .8-1.7 1.7-1.7h3.2l1.7 1.9h6.1c.9 0 1.7.8 1.7 1.7v6.3c0 1-.8 1.7-1.7 1.7H4.5c-.9 0-1.7-.8-1.7-1.7z"/></svg></span>
-          <h3>Your work stays filed</h3>
-          <p>Claude already keeps Code sessions and projects per account. After a switch, each account finds its own, just as it left them.</p>
-        </div>
-        <div class="feat reveal">
-          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.2"/><path d="M13.2 10v1.2c0 1.3 1 2.3 2.2 2.3s2.1-1 2.1-2.3V10a7.5 7.5 0 10-3 6"/></svg></span>
-          <h3>Named for you</h3>
-          <p>Accounts show up by their email when Claude Code knows it. Rename any of them in place, right in the panel.</p>
-        </div>
-        <div class="feat reveal">
-          <span class="icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M6 8l2.4 2L6 12M10.5 12.5h3.5"/></svg></span>
-          <h3>Works from the terminal</h3>
-          <p>The same switch from a script or a launcher: <code>switch work</code>, <code>add</code> and <code>list</code>.</p>
-        </div>
+      <div class="tiles">
+        <article class="tile">
+          <div class="tile-art" data-cell="3" data-scene="morning" data-seed="11" data-trees="right" data-clouds="2" data-horizon=".6" data-prop="signpost">
+            <canvas class="scene"></canvas>
+            <div class="mini t-add">
+              <div class="m-row"><span class="av" style="--t:#007aff">W</span><span class="m-text"><b>Work</b><i>ada@example.com</i></span><span class="m-pill">In use</span></div>
+              <div class="m-row m-add"><span class="av add"><svg><use href="#plus"/></svg></span><span class="m-text"><b class="plain">Add another account</b></span></div>
+              <svg class="cursor" style="left: 128px; top: 66px"><use href="#cursor"/></svg>
+            </div>
+          </div>
+          <div class="tile-text">
+            <h3>Add each account once</h3>
+            <p>Choose Add another account and sign in. Every account you add stays signed in.</p>
+          </div>
+        </article>
+        <article class="tile">
+          <div class="tile-art" data-cell="3" data-scene="day" data-seed="5" data-trees="left" data-clouds="3" data-horizon=".6" data-prop="rails">
+            <canvas class="scene"></canvas>
+            <div class="mini t-switch">
+              <div class="m-open">
+                <div class="m-row"><span class="av" style="--t:#ff9500">P</span><span class="m-text"><b>Personal</b><i>ada@example.org</i></span></div>
+                <div class="m-confirm">
+                  <p>Claude restarts to switch. Work stays signed in here.</p>
+                  <div class="m-actions"><span class="b-out">Cancel</span><span class="b-fill">Switch</span></div>
+                </div>
+              </div>
+              <svg class="cursor" style="left: 196px; top: 116px"><use href="#cursor"/></svg>
+            </div>
+          </div>
+          <div class="tile-text">
+            <h3>Pick one in the menu bar</h3>
+            <p>Click an account and confirm. Claude quits and opens again as that account.</p>
+          </div>
+        </article>
+        <article class="tile">
+          <div class="tile-art" data-cell="3" data-scene="dusk" data-seed="8" data-trees="left right" data-clouds="2" data-horizon=".66" data-prop="picnic">
+            <canvas class="scene"></canvas>
+            <div class="mini m-prog t-back">
+              <div class="pr-head">
+                <span class="av" style="--t:#ff9500">P</span>
+                <div class="m-swap pr-title"><span class="run-t">Switching to Personal</span><span class="done-t">Signed in as Personal</span></div>
+              </div>
+              <ol class="steps">
+                <li><span class="st"><svg><use href="#tickfill"/></svg></span>Quit Claude</li>
+                <li><span class="st"><svg><use href="#tickfill"/></svg></span>Save Work</li>
+                <li><span class="st"><svg><use href="#tickfill"/></svg></span>Sign in as Personal</li>
+                <li><span class="st"><svg><use href="#tickfill"/></svg></span>Open Claude</li>
+              </ol>
+            </div>
+          </div>
+          <div class="tile-text">
+            <h3>Back in seconds</h3>
+            <p>Your Code sessions and projects are waiting, filed under each account.</p>
+          </div>
+        </article>
       </div>
     </div>
   </section>
 
   <section class="block" id="privacy">
     <div class="wrap">
-      <div class="reveal">
-        <span class="label">Privacy</span>
-        <h2>It moves a few files. Here is every one.</h2>
-        <p class="sub">Nothing is decrypted, uploaded or read from your Keychain. A switch only swaps the parts of Claude's folder that belong to whoever is signed in.</p>
-      </div>
-      <div class="swap">
-        <div class="swap-card soft reveal">
-          <h3>Swapped on each switch</h3>
-          <p>From Claude's folder in Application Support.</p>
-          <ul class="list">
-            <li><span class="tick"><svg><use href="#check"/></svg></span><code>Cookies</code><span class="k">the claude.ai session</span></li>
-            <li><span class="tick"><svg><use href="#check"/></svg></span><code>Local Storage, Session Storage</code><span class="k">web storage</span></li>
-            <li><span class="tick"><svg><use href="#check"/></svg></span><code>IndexedDB, WebStorage, Service Worker</code><span class="k">web storage</span></li>
-            <li class="top">
-              <span class="tick"><svg><use href="#check"/></svg></span>
-              <div>
-                <div>Four keys in <code>config.json</code></div>
-                <div class="keys"><code>oauth:tokenCache</code><code>oauth:tokenCacheV2</code><code>lastKnownAccountUuid</code><code>bootSideSessions</code></div>
-              </div>
-            </li>
-          </ul>
-          <p class="note">Before every switch it keeps a copy of the current sign-in, and puts it back if anything goes wrong.</p>
+      <div class="privacy">
+        <div class="priv-art" data-scene="golden" data-seed="21" data-trees="left" data-cottage=".8" data-clouds="3" data-horizon=".66">
+          <canvas class="scene"></canvas>
+          <div class="receipt-wrap">
+            <div class="receipt">
+              <div class="rc-head"><b>Switched to Personal</b><span id="rcTime">9:41</span></div>
+              <div class="rc-sub">From Work, on this Mac</div>
+              <div class="rc-sep"></div>
+              <div class="rc-line"><span>Cookies and web storage</span><span>Swapped</span></div>
+              <div class="rc-line"><span>Sign-in keys in config.json</span><span>4</span></div>
+              <div class="rc-line"><span>Copy of the last sign-in</span><span>Kept</span></div>
+              <div class="rc-sep"></div>
+              <div class="rc-line"><span>Sent to any server</span><span>0</span></div>
+              <div class="rc-line"><span>Keychain reads</span><span>0</span></div>
+              <div class="rc-line"><span>Accounts signed out</span><span>0</span></div>
+              <div class="rc-sep"></div>
+              <div class="rc-foot"><span class="tick"><svg><use href="#check"/></svg></span>Everything stayed on this Mac</div>
+            </div>
+          </div>
         </div>
-        <div class="swap-card reveal">
-          <h3>Never touched</h3>
-          <p>Everything else stays exactly where it is.</p>
-          <ul class="list">
-            <li><span class="cross"><svg><use href="#x"/></svg></span>Your Keychain and passwords</li>
-            <li><span class="cross"><svg><use href="#x"/></svg></span>Anthropic's servers</li>
-            <li><span class="cross"><svg><use href="#x"/></svg></span>Code sessions, projects and worktrees</li>
-            <li><span class="cross"><svg><use href="#x"/></svg></span>Settings, connectors and extensions</li>
-            <li><span class="cross"><svg><use href="#x"/></svg></span>Anything outside Claude's folder</li>
+        <div class="priv-text">
+          <span class="label">Privacy</span>
+          <h2>Nothing leaves your Mac.</h2>
+          <p class="sub">A switch moves a few of Claude's own files from one folder to another. That is all it does.</p>
+          <ul class="facts">
+            <li><span class="tick"><svg><use href="#check"/></svg></span><div>No servers, no sign-up<span class="note">It never connects to the internet.</span></div></li>
+            <li><span class="tick"><svg><use href="#check"/></svg></span><div>No passwords or Keychain<span class="note">Claude's files are copied as they are, still encrypted.</span></div></li>
+            <li><span class="tick"><svg><use href="#check"/></svg></span><div>No one signed out<span class="note">Every account keeps its session, ready to switch back.</span></div></li>
           </ul>
+          <a class="more" href="https://github.com/realanshuman/claude-account-switcher#how-it-works">See exactly which files it moves<span aria-hidden="true">→</span></a>
         </div>
       </div>
     </div>
@@ -506,26 +491,21 @@
 
   <section class="block" id="install">
     <div class="wrap">
-      <div class="reveal">
+      <div class="head">
         <span class="label">Install</span>
-        <h2>Built on your Mac in about a minute.</h2>
-        <p class="sub">The app builds from source with Apple's free command line tools, lands in your Applications folder and opens in the menu bar.</p>
+        <h2>On your Mac in about a minute.</h2>
       </div>
       <div class="install">
-        <div class="req reveal">
-          <h3>You need</h3>
-          <ul class="list">
-            <li><span class="tick"><svg><use href="#check"/></svg></span>macOS 14 Sonoma or later</li>
-            <li><span class="tick"><svg><use href="#check"/></svg></span>The Claude Mac app</li>
-            <li><span class="tick"><svg><use href="#check"/></svg></span>Command line tools: <code>xcode-select --install</code></li>
-          </ul>
+        <div class="inst-text">
+          <h3>Built from source, by you</h3>
+          <p>The script builds the app with Apple's free command line tools, puts it in your Applications folder and opens it in the menu bar.</p>
+          <div class="needs"><span>macOS 14 or later</span><span>The Claude Mac app</span><span><code>xcode-select --install</code></span></div>
         </div>
-        <div class="terminal reveal">
-          <div class="term-bar"><span>Terminal</span><button class="btn small" type="button" data-copy="install">Copy</button></div>
+        <div class="terminal">
+          <div class="term-bar"><span>Terminal</span><button class="btn small" type="button" data-copy>Copy</button></div>
 <div class="term-body" id="install-cmd"><span class="p">$ </span>git clone https://github.com/realanshuman/claude-account-switcher.git
 <span class="p">$ </span>cd claude-account-switcher
 <span class="p">$ </span>./install.sh</div>
-          <div class="term-foot">Then click the icon in your menu bar and choose Add another account.</div>
         </div>
       </div>
     </div>
@@ -533,26 +513,22 @@
 
   <section class="block" id="faq">
     <div class="wrap">
-      <div class="head-center reveal">
+      <div class="head">
         <span class="label">FAQ</span>
         <h2>Questions, answered.</h2>
       </div>
-      <div class="faq reveal">
+      <div class="faq">
         <details>
           <summary>Is this made by Anthropic?<span class="plus"></span></summary>
           <div class="answer"><div><p>No. It's an independent, open source tool. It isn't affiliated with or endorsed by Anthropic, and it only works with files the Claude Mac app keeps on your own Mac.</p></div></div>
         </details>
         <details>
           <summary>Will it sign me out of anything?<span class="plus"></span></summary>
-          <div class="answer"><div><p>No. It never signs any account out, so every session stays valid. To keep it that way, switch with the switcher rather than Log out in Claude, which ends that account's session.</p></div></div>
+          <div class="answer"><div><p>No. It never signs an account out, so every session stays valid. To keep it that way, switch with the switcher rather than Log out in Claude, which ends that account's session.</p></div></div>
         </details>
         <details>
           <summary>What happens to things running in Claude?<span class="plus"></span></summary>
           <div class="answer"><div><p>Claude restarts to switch, so anything running in it stops. Code sessions stay in the sidebar, filed under their own account, and pick up when you switch back.</p></div></div>
-        </details>
-        <details>
-          <summary>Does it read my passwords or Keychain?<span class="plus"></span></summary>
-          <div class="answer"><div><p>No. Claude encrypts its sign-in with a key in your Keychain. The switcher copies the encrypted files exactly as they are and never reads the key, so it can't see your session or password.</p></div></div>
         </details>
         <details>
           <summary>What if a saved sign-in expires?<span class="plus"></span></summary>
@@ -560,19 +536,25 @@
         </details>
         <details>
           <summary>Why build from source instead of a download?<span class="plus"></span></summary>
-          <div class="answer"><div><p>There's no notarized download yet. Building it yourself takes about a minute, and you can read every line it runs first. The included test switches a fake Claude app and never touches the real one.</p></div></div>
+          <div class="answer"><div><p>There's no notarized download yet. Building it yourself takes about a minute, and you can read every line it runs first.</p></div></div>
         </details>
       </div>
     </div>
   </section>
 
   <section class="wrap">
-    <div class="final reveal">
-      <h2>Keep every account one click away.</h2>
-      <p class="sub">Free, open source and small enough to read in an afternoon.</p>
-      <div class="cta">
-        <a class="btn primary" href="#install">Install on your Mac</a>
-        <a class="btn" href="https://github.com/realanshuman/claude-account-switcher"><svg><use href="#github"/></svg>Star on GitHub</a>
+    <div class="final">
+      <div class="final-art" data-scene="day" data-seed="17" data-trees="left right" data-clouds="5" data-horizon=".72">
+        <canvas class="scene"></canvas>
+        <svg class="final-mark"><use href="#mark"/></svg>
+      </div>
+      <div class="final-inner">
+        <h2>Keep every account one click away.</h2>
+        <p class="sub">Free, open source and small enough to read in an afternoon.</p>
+        <div class="cta">
+          <a class="btn primary" href="#install">Install on your Mac</a>
+          <a class="btn" href="https://github.com/realanshuman/claude-account-switcher"><svg><use href="#github"/></svg>Star on GitHub</a>
+        </div>
       </div>
     </div>
   </section>
@@ -593,57 +575,519 @@
 
 <script>
 (() => {
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // ?still draws every section at once, finished: for screenshots, and how reduced motion sees it.
+  const still = /[?&]still\b/.test(location.search);
+  const reduce = still || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (still) document.documentElement.classList.remove("js");
   const sleep = ms => new Promise(r => setTimeout(r, reduce ? Math.min(ms, 60) : ms));
+  const seen = (el, fn, margin = "0px 0px -8% 0px") => {
+    if (still || !("IntersectionObserver" in window)) return fn();
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); fn(); } }, { rootMargin: margin });
+    io.observe(el);
+  };
 
-  // Nav border once the page scrolls
   const nav = document.getElementById("nav");
   const onScroll = () => nav.classList.toggle("scrolled", scrollY > 8);
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  // The hero fades in on load, one line after another; the rest as it scrolls into view.
-  const reveals = [...document.querySelectorAll(".reveal")];
-  const hero = reveals.filter(el => el.closest(".hero"));
-  hero.forEach((el, i) => (el.style.transitionDelay = `${i * 70}ms`));
-  requestAnimationFrame(() => requestAnimationFrame(() => hero.forEach(el => el.classList.add("in"))));
-  const rest = reveals.filter(el => !el.closest(".hero"));
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver(entries => {
-      for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-    }, { rootMargin: "0px 0px -8% 0px" });
-    rest.forEach(el => io.observe(el));
-  } else {
-    rest.forEach(el => el.classList.add("in"));
+
+  // ---------- Pixel scenes ----------
+  // Each card's background is a small landscape, painted first in smooth colour (gradient skies, clouds
+  // shaded from the sun's side, hazy distant hills, leafy trees, grass), then pixelated and reduced to a
+  // few steps per colour with an ordered pattern, the way pixel-art illustrations look. The scene,
+  // palette and seed come from data attributes, so every visit draws the same picture. No image files.
+  const BAYER = (() => {
+    let m = [[0]];
+    while (m.length < 8) m = [...m.map(r => [...r.map(v => 4 * v), ...r.map(v => 4 * v + 2)]), ...m.map(r => [...r.map(v => 4 * v + 3), ...r.map(v => 4 * v + 1)])];
+    return m.map(r => r.map(v => (v + 0.5) / 64));
+  })();
+  const rgb = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16) / 255);
+  const scenePalette = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === "string" ? rgb(v) : Array.isArray(v) && typeof v[0] === "string" ? v.map(rgb) : v]));
+  const PALETTES = {
+    day: scenePalette({
+      sky: ["#2c64c8", "#3f82dd", "#74aeee", "#b9dbf7"], sun: null, halo: "#ffffff",
+      cloudLit: "#ffffff", cloudMid: "#e3ecfa", cloudShade: "#9db2da", cloudDeep: "#7f95c4",
+      haze: "#b4d1ef", far: "#7fa6c6", mid: "#62a052", midDark: "#3b7638",
+      grass: "#66b041", grassDark: "#2f6e27", grassLight: "#a9dc6a",
+      leafDark: "#173f22", leaf: "#2f7531", leafLight: "#86c652", trunk: "#4b321f", trunkLight: "#86603c",
+      flowers: ["#ffd84a", "#ff6b5a", "#ffffff", "#ffd84a"], bird: "#22324d", path: ["#8a6a45", "#b38d5e", "#d8b682"],
+    }),
+    morning: scenePalette({
+      sky: ["#6f8fd6", "#a7acdc", "#efbfae", "#fde0bd"], sun: [.6, .8, .085], halo: "#fff1cf", sunDisc: "#fffbe8",
+      cloudLit: "#fff7ef", cloudMid: "#f6dcd6", cloudShade: "#c9a6b8", cloudDeep: "#a98aa6",
+      haze: "#e7c7c3", far: "#a3a9c8", mid: "#7da36a", midDark: "#4f7d4c",
+      grass: "#74ad4f", grassDark: "#3c7333", grassLight: "#b9dc7f",
+      leafDark: "#20462a", leaf: "#3a7638", leafLight: "#93c564", trunk: "#4b3324", trunkLight: "#86603f",
+      flowers: ["#ffe066", "#ff8f8f", "#ffffff", "#f6b2e1"], bird: "#4a4f72", path: ["#8c6c52", "#b99376", "#dcbb9b"],
+    }),
+    dusk: scenePalette({
+      sky: ["#2f3f86", "#6d62a8", "#d07f98", "#f6ad7f"], sun: [.5, .98, .11], halo: "#ffc58f", sunDisc: "#fff0c4",
+      cloudLit: "#ffc9a8", cloudMid: "#d68e9f", cloudShade: "#8a679b", cloudDeep: "#5a4c86",
+      haze: "#b68aa6", far: "#6c6496", mid: "#455c70", midDark: "#2c3f52",
+      grass: "#3f5f47", grassDark: "#1f3328", grassLight: "#6f8f68",
+      leafDark: "#111f18", leaf: "#22382a", leafLight: "#4f6b4c", trunk: "#1c1515", trunkLight: "#3d2c25",
+      flowers: ["#ffd27a", "#f29a8c", "#f6e7d2", "#ffd27a"], bird: "#241f3d", path: ["#3f3438", "#5e4c50", "#80696a"],
+    }),
+    golden: scenePalette({
+      sky: ["#4778c8", "#7a9fdc", "#e8c79f", "#f9dba5"], sun: [.82, .46, .07], halo: "#fff0c6", sunDisc: "#fffbea",
+      cloudLit: "#fff8ea", cloudMid: "#f3e0cf", cloudShade: "#c4aab8", cloudDeep: "#9d8aa8",
+      haze: "#e6d2b2", far: "#93a6c0", mid: "#7c9d55", midDark: "#4f7537",
+      grass: "#7aa846", grassDark: "#466f2a", grassLight: "#c2dc79",
+      leafDark: "#21401f", leaf: "#3e6c2e", leafLight: "#9cc65a", trunk: "#4d3420", trunkLight: "#8a6339",
+      flowers: ["#ffe066", "#ff7a5e", "#ffffff", "#ffd27a"], bird: "#3f4766", path: ["#8d6a42", "#b48b58", "#d8b276"],
+    }),
+  };
+
+  const hash = (x, y, s) => {
+    let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  };
+  const noise2 = (x, y, s) => {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = hash(ix, iy, s), b = hash(ix + 1, iy, s), c = hash(ix, iy + 1, s), d = hash(ix + 1, iy + 1, s);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+  const fbm2 = (x, y, s, oct = 4) => { let t = 0, a = .5, n = 0; for (let i = 0; i < oct; i++) { t += a * noise2(x, y, s + i * 31); n += a; x *= 2.03; y *= 2.03; a *= .5; } return t / n; };
+  const fbm1 = (x, s) => fbm2(x, .5, s, 3);
+  const rng = seed => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const clamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const ramp = (stops, t) => { const n = stops.length - 1, i = Math.min(n - 1, Math.floor(clamp(t) * n)); return mix(stops[i], stops[i + 1], smooth(0, 1, clamp(t) * n - i)); };
+  // three-tone shading: shadow, mid and lit colours by a 0..1 light value
+  const shade3 = (dark, mid, lit, l) => l < .5 ? mix(dark, mid, l * 2) : mix(mid, lit, (l - .5) * 2);
+
+  function paintScene(el, W, H) {
+    const P = PALETTES[el.dataset.scene] || PALETTES.day, seed = +el.dataset.seed || 1, rnd = rng(seed * 7919 + 17);
+    const horizon = H * (+el.dataset.horizon || .62);
+    const k = H / 150; // detail scale, so small cards and the wide hero share proportions
+    const col = new Float32Array(W * H * 3), alpha = new Uint8Array(W * H).fill(255);
+    const put = (i, c) => { col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2]; };
+    const at = i => [col[i * 3], col[i * 3 + 1], col[i * 3 + 2]];
+
+    // Clouds: puffs along a flat base; the soft shape is roughened with noise and lit from the sun's side
+    const lightDir = P.sun ? [Math.sign(.5 - P.sun[0]) || -1, -.6] : [-1, -1];
+    const clouds = [];
+    for (let i = 0, n = +el.dataset.clouds || 4; i < n; i++) {
+      const w = W * (.16 + .2 * rnd()), h = Math.max(7 * k, w * (.3 + .1 * rnd()));
+      const cx = W * ((i + .15 + rnd() * .7) / n), base = horizon * (.38 + .36 * rnd()), puffs = [];
+      for (let j = 0, m = 5 + Math.floor(rnd() * 4); j < m; j++) {
+        const t = (j + .5) / m, r = h * (.32 + .6 * Math.sin(t * Math.PI)) * (.8 + .35 * rnd());
+        puffs.push({ x: cx - w / 2 + w * t + (rnd() - .5) * w * .1, y: base - r * .45 - rnd() * h * .15, r });
+      }
+      clouds.push({ puffs, base, h, x0: cx - w / 2 - h * 1.2, x1: cx + w / 2 + h * 1.2, y0: base - h * 2, y1: base + 2, s: seed + 50 + i });
+    }
+    const cloudField = (cl, x, y) => {
+      let v = 0;
+      for (const p of cl.puffs) v = Math.max(v, 1 - Math.hypot(x - p.x, (y - p.y) * 1.08) / p.r);
+      v += (fbm2(x * .11 / k, y * .11 / k, cl.s) - .5) * .55 * smooth(-.14, .12, v);
+      return v * smooth(cl.base + 1.5, cl.base - 2.5 * k, y);
+    };
+
+    // Ridges: far hills, middle hills, then the meadow
+    const farY = new Float32Array(W), midY = new Float32Array(W), nearY = new Float32Array(W);
+    for (let x = 0; x < W; x++) {
+      farY[x] = horizon - H * .11 * fbm1(x / (W * .16), seed + 1) + 2;
+      midY[x] = horizon + H * .05 - H * .09 * fbm1(x / (W * .24), seed + 2);
+      nearY[x] = horizon + H * .16 - H * .07 * fbm1(x / (W * .3), seed + 3);
+    }
+
+    // Trees: a canopy of leafy clumps over a trunk
+    const trees = [];
+    const groundAt = x => nearY[Math.max(0, Math.min(W - 1, Math.floor(x)))];
+    const addTree = (tx, size) => {
+      const gy = groundAt(tx) + size * .1, th = size * .58, cy = gy - th - size * .16, puffs = [];
+      for (let j = 0, n = 9 + Math.floor(rnd() * 4); j < n; j++) {
+        const a = (j / n) * Math.PI * 2 + rnd() * .5, d = .25 + .25 * rnd();
+        puffs.push({ x: tx + Math.cos(a) * size * d * .9, y: cy + Math.sin(a) * size * d * .62, r: size * (.2 + .12 * rnd()) });
+      }
+      puffs.push({ x: tx - size * .05, y: cy - size * .1, r: size * .34 });
+      trees.push({ tx, gy, th, tw: Math.max(2, size * .11), puffs, size, x0: tx - size * .9, x1: tx + size * .9, y0: cy - size * .75, y1: gy + 2, s: seed + 80 + trees.length });
+    };
+    const treeList = (el.dataset.trees || "").split(" ").filter(Boolean);
+    if (treeList.includes("left")) addTree(W * .07, H * .5);
+    if (treeList.includes("right")) addTree(W * .93, H * .56);
+    const canopy = (t, x, y) => {
+      let v = 0;
+      for (const p of t.puffs) v = Math.max(v, 1 - Math.hypot(x - p.x, y - p.y) / p.r);
+      return v + (fbm2(x * .45 / k, y * .45 / k, t.s) - .5) * .3 * smooth(-.18, .1, v);
+    };
+    // distant trees along the middle ridge
+    const groves = [];
+    for (let i = 0, n = Math.round(W / (22 * k)); i < n; i++) {
+      const gx = rnd() * W;
+      groves.push({ x: gx, y: midY[Math.min(W - 1, Math.floor(gx))] + 1, r: (2 + rnd() * 3) * k });
+    }
+    // bushes along the meadow edge
+    const bushes = [];
+    for (let i = 0, n = Math.max(2, Math.round(W / (55 * k))); i < n; i++) {
+      const bx = W * (.14 + .72 * rnd());
+      bushes.push({ x: bx, y: groundAt(bx) + 2 * k, r: (4 + rnd() * 4) * k, s: seed + 200 + i });
+    }
+
+    // Beds painted into the ground: a dirt path forking at the signpost, gravel under the two tracks
+    const prop = el.dataset.prop || "", ks = W / 116;
+    const lanes = [];
+    if (prop === "signpost") {
+      const fx = W * .6, fy = H - 10;
+      lanes.push({ y0: H + 2, y1: fy, x0: W * .47, x1: fx, w0: 12 * ks, w1: 6 * ks });
+      lanes.push({ y0: fy, y1: horizon + 7, x0: fx, x1: W * .1, w0: 6 * ks, w1: 1.2 });
+      lanes.push({ y0: fy, y1: horizon + 10, x0: fx, x1: W * .93, w0: 6 * ks, w1: 1.2 });
+    }
+    const track = { x0: W * .42, g0: 15 * ks, hz: horizon + 3, ends: [W * .3, W * .88] };
+    const trackAt = (t, xb) => [track.x0 + (xb - track.x0) * smooth(.14, 1, t) ** 1.1, H + 2 - t * (H + 2 - track.hz), track.g0 * (1 - .84 * t)];
+    const bedAt = (x, y) => {
+      if (prop === "rails") {
+        const t = (H + 2 - y) / (H + 2 - track.hz);
+        if (t < 0 || t > 1) return false;
+        return track.ends.some(xb => { const [cx, , g] = trackAt(t, xb); return Math.abs(x - cx) < g * 1.55; });
+      }
+      for (const l of lanes) {
+        if (y > l.y0 || y < l.y1) continue;
+        const t = (l.y0 - y) / (l.y0 - l.y1), cx = l.x0 + (l.x1 - l.x0) * (1 - (1 - t) ** 2), w = l.w0 + (l.w1 - l.w0) * t;
+        if (Math.abs(x - cx) < w) return true;
+      }
+      return false;
+    };
+
+    const sun = P.sun && { x: P.sun[0] * W, y: P.sun[1] * horizon, r: Math.max(5, P.sun[2] * H) };
+
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      // sky
+      let c = ramp(P.sky, y / horizon);
+      if (sun) {
+        const d = Math.hypot(x - sun.x, y - sun.y);
+        c = mix(c, P.halo, Math.exp(-d / (sun.r * 2.2)) * .55);
+        if (d < sun.r) c = P.sunDisc;
+      }
+      for (const cl of clouds) {
+        if (x < cl.x0 || x > cl.x1 || y < cl.y0 || y > cl.y1) continue;
+        const v = cloudField(cl, x, y), dens = smooth(.05, .24, v);
+        if (dens <= 0) continue;
+        const toward = cloudField(cl, x + lightDir[0] * 3 * k, y + lightDir[1] * 3 * k);
+        let l = clamp(.55 + (v - toward) * 1.7);
+        l *= 1 - smooth(cl.base - cl.h * .55, cl.base, y) * .55;
+        const cc = l < .33 ? mix(P.cloudDeep, P.cloudShade, l * 3) : shade3(P.cloudShade, P.cloudMid, P.cloudLit, (l - .33) * 1.5);
+        c = mix(c, cc, dens);
+      }
+      // far hills, hazy
+      if (y >= farY[x]) c = mix(mix(P.far, P.haze, .3 + .2 * fbm2(x * .05, y * .1, seed + 4)), P.haze, smooth(farY[x] + 6 * k, farY[x], y) * .25);
+      // middle hills: fields with distant groves
+      if (y >= midY[x]) {
+        c = mix(P.mid, P.midDark, smooth(.45, .75, fbm2(x * .06 / k, y * .14 / k, seed + 5)) * .8);
+        c = mix(c, P.haze, .18);
+        if (y - midY[x] < 1) c = mix(c, P.grassLight, .45);
+      }
+      for (const g of groves) {
+        const dx = x - g.x, dy = y - (g.y - g.r);
+        if (dx * dx + dy * dy * 1.3 < g.r * g.r && y < g.y + 1) c = mix(P.leaf, P.leafLight, clamp(.5 - (dx + dy) / (g.r * 2)) * .7), c = mix(c, P.haze, .15);
+      }
+      // the meadow: patches and blades of grass, darker towards the front
+      if (y >= nearY[x]) {
+        const depth = (y - nearY[x]) / Math.max(1, H - nearY[x]);
+        const patch = fbm2(x * .03 / k, y * .07 / k, seed + 6), blade = fbm2(x * .55 / k, y * .13 / k, seed + 7);
+        c = mix(P.grass, P.grassDark, clamp(depth * .7 + (patch - .5) * .8));
+        c = mix(c, P.grassLight, smooth(.58, .8, blade) * .55);
+        c = mix(c, P.grassDark, smooth(.42, .22, blade) * .5);
+        if (y - nearY[x] < 1.2) c = mix(c, P.grassLight, .5);
+      }
+      if (P.path && y > horizon && bedAt(x, y)) {
+        const n = fbm2(x * .4, y * .4, seed + 41);
+        c = mix(P.path[1], P.path[0], smooth(.45, .75, n) * .8);
+        if (hash(x, y, seed + 43) > (prop === "rails" ? .8 : .9)) c = P.path[2];
+      }
+      for (const b of bushes) {
+        const dx = x - b.x, dy = y - (b.y - b.r * .6);
+        if (y > b.y + 1) continue;
+        const v = 1 - Math.hypot(dx, dy * 1.25) / b.r + (fbm2(x * .5 / k, y * .5 / k, b.s) - .5) * .5;
+        if (v > 0) c = shade3(P.leafDark, P.leaf, P.leafLight, clamp(.5 - (dx + dy) / (b.r * 2.2) + (v - .3) * .3));
+      }
+      // trees
+      for (const t of trees) {
+        if (x < t.x0 || x > t.x1 || y < t.y0 || y > t.y1) continue;
+        if (y > t.gy - t.th && y <= t.gy && Math.abs(x - t.tx) < t.tw / 2) {
+          const u = (x - (t.tx - t.tw / 2)) / t.tw;
+          c = mix(P.trunkLight, P.trunk, smooth(.2, .8, u) * .9 + (fbm2(x * .8, y * .2, t.s) - .5) * .3);
+        }
+        if (y > t.gy - 2 && y < t.gy + 2 && Math.abs(x - t.tx) < t.size * .5) c = mix(c, P.grassDark, .55 * (1 - Math.abs(x - t.tx) / (t.size * .5)));
+        const v = canopy(t, x, y);
+        if (v > .1) {
+          const toward = canopy(t, x + lightDir[0] * 2.5 * k, y + lightDir[1] * 2.5 * k);
+          const l = clamp(.5 + (v - toward) * 1.8 + (fbm2(x * .9 / k, y * .9 / k, t.s + 5) - .5) * .45);
+          c = shade3(P.leafDark, P.leaf, P.leafLight, l);
+        }
+      }
+      put(i, c);
+    }
+
+    // Pixelate: every pixel snaps to the scene's palette (its colours and the steps between related
+    // ones), with an ordered pattern only where it sits between its two nearest colours
+    const swatches = [];
+    const addSw = c => { if (!swatches.some(o => Math.abs(o[0] - c[0]) + Math.abs(o[1] - c[1]) + Math.abs(o[2] - c[2]) < .02)) swatches.push(c); };
+    const chain = list => list.forEach((c, j) => { addSw(c); if (j) addSw(mix(list[j - 1], c, .5)); });
+    chain(P.sky); chain([P.cloudDeep, P.cloudShade, P.cloudMid, P.cloudLit]); chain([P.far, P.haze]);
+    chain([P.midDark, P.mid, mix(P.mid, P.haze, .2), P.grassLight]); chain([P.grassDark, P.grass, P.grassLight]);
+    chain([P.leafDark, P.leaf, P.leafLight]); chain([P.trunk, P.trunkLight]);
+    if (P.path) chain(P.path);
+    if (P.sun) { chain([P.sky[2], P.halo, P.sunDisc]); chain([P.sky[3], P.halo]); }
+    const px = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, r = col[i * 3], g = col[i * 3 + 1], bl = col[i * 3 + 2];
+      let d1 = 9, d2 = 9, c1 = swatches[0], c2 = swatches[0];
+      for (const sw of swatches) {
+        const d = (sw[0] - r) ** 2 * .3 + (sw[1] - g) ** 2 * .59 + (sw[2] - bl) ** 2 * .11;
+        if (d < d1) { d2 = d1; c2 = c1; d1 = d; c1 = sw; } else if (d < d2) { d2 = d; c2 = sw; }
+      }
+      const t = Math.sqrt(d1) / (Math.sqrt(d1) + Math.sqrt(d2) + 1e-6), c = clamp((t - .28) / .22) > BAYER[y & 7][x & 7] ? c2 : c1;
+      px[i * 4] = c[0] * 255; px[i * 4 + 1] = c[1] * 255; px[i * 4 + 2] = c[2] * 255; px[i * 4 + 3] = alpha[i];
+    }
+    const set = (x, y, c) => {
+      x = Math.round(x); y = Math.round(y);
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      const p = (y * W + x) * 4;
+      px[p] = c[0] * 255; px[p + 1] = c[1] * 255; px[p + 2] = c[2] * 255; px[p + 3] = 255;
+    };
+
+    // Sprites on top, drawn as crisp pixels: birds, flowers, a cottage
+    for (let i = 0, n = 2 + Math.floor(rnd() * 3); i < n; i++) {
+      const bx = W * (.15 + .7 * rnd()), by = horizon * (.1 + .25 * rnd());
+      [[-2, -1], [-1, 0], [0, 0], [1, 0], [2, -1]].forEach(([dx, dy]) => set(bx + dx, by + dy, P.bird));
+    }
+    for (let i = 0, n = Math.round(W * .14); i < n; i++) {
+      const fx = rnd() * W, gy = groundAt(fx), fy = gy + 4 + rnd() * (H - gy - 5), c = P.flowers[Math.floor(rnd() * P.flowers.length)];
+      const big = rnd() > .55 && k > .8;
+      set(fx, fy + 1, P.grassDark);
+      if (big) { set(fx, fy, c); set(fx - 1, fy, c); set(fx + 1, fy, c); set(fx, fy - 1, c); set(fx, fy + 1, mix(c, P.grassDark, .4)); set(fx, fy + 2, P.grassDark); }
+      else set(fx, fy, c);
+    }
+    if (el.dataset.cottage) {
+      const s = Math.max(16, H * .17), cx = +el.dataset.cottage * W, gy = groundAt(cx) + s * .3;
+      const wall = [rgb("#f1e4c6"), rgb("#d3bd96")], roof = [rgb("#8f3a2c"), rgb("#bf5640"), rgb("#dc7558")];
+      const wx = cx - s / 2, wy = gy - s * .58;
+      for (let y = Math.floor(wy); y <= gy; y++) for (let x = Math.floor(wx); x <= wx + s; x++) set(x, y, x > cx + s * .22 ? wall[1] : wall[0]);
+      for (let y = 0; y <= s * .44; y++) for (let x = Math.floor(wx - s * .1 + y * 1.05); x <= wx + s * 1.1 - y * 1.05; x++)
+        set(x, wy - y, y < 1 || x > cx + s * .2 ? roof[0] : (x + y) % 4 === 0 ? roof[2] : roof[1]);
+      const chx = cx + s * .22, chy = wy - s * .52;
+      for (let y = Math.floor(chy); y <= wy - s * .12; y++) for (let x = Math.floor(chx); x <= chx + s * .1; x++) set(x, y, roof[0]);
+      for (let i = 0; i < 4; i++) { const r = 1 + i * .7; for (let a = 0; a < 6.28; a += .4) set(chx + s * .05 + i * 1.8 + Math.cos(a) * r, chy - 3 - i * 3.4 + Math.sin(a) * r, i > 2 ? P.cloudMid : P.cloudLit); }
+      for (let y = Math.floor(gy - s * .33); y <= gy; y++) for (let x = Math.floor(cx - s * .32); x <= cx - s * .15; x++) set(x, y, P.trunk);
+      const win = rgb("#ffd65e");
+      for (let y = Math.floor(wy + s * .14); y <= wy + s * .32; y++) for (let x = Math.floor(cx + s * .02); x <= cx + s * .28; x++)
+        set(x, y, Math.abs(x - (cx + s * .15)) < .6 || Math.abs(y - (wy + s * .23)) < .6 ? wall[1] : win);
+    }
+
+    // The subject of a how-it-works card, drawn as crisp pixel art with its own colours
+    const rect = (x0, y0, w, h, c) => { for (let y = Math.round(y0); y < Math.round(y0 + h); y++) for (let x = Math.round(x0); x < Math.round(x0 + w); x++) set(x, y, c); };
+    const dusk = el.dataset.scene === "dusk", dim = c => dusk ? mix(c, rgb("#2a2440"), .42) : c;
+    const wood = ["#4a2f1b", "#7a4e2c", "#a8743f", "#cf9a5f"].map(rgb).map(dim);
+    const GLYPHS = { W: ["10001", "10001", "10101", "10101", "01010"], O: ["111", "101", "101", "101", "111"], R: ["110", "101", "110", "101", "101"], K: ["101", "101", "110", "101", "101"], H: ["101", "101", "111", "101", "101"], M: ["10001", "11011", "10101", "10001", "10001"], E: ["111", "100", "110", "100", "111"] };
+    const textWidth = word => [...word].reduce((w, ch) => w + GLYPHS[ch][0].length + 1, -1);
+    const text = (word, x0, y0, c) => { let x = x0; for (const ch of word) { GLYPHS[ch].forEach((row, r) => [...row].forEach((on, cI) => { if (on === "1") set(x + cI, y0 + r, c); })); x += GLYPHS[ch][0].length + 1; } };
+
+    if (prop === "signpost") {
+      const px0 = Math.round(W * .6), base = Math.round(H - 9), top = base - Math.round(38 * ks);
+      for (let x = px0 - 4; x <= px0 + 6; x++) set(x, base + 1, P.path[0]);
+      // a board: outline first, then the face with a lit top edge and a shaded bottom, the word, two nails
+      const board = (ax, by, dir, cols, word) => {
+        const L = Math.round(26 * ks), h = 9, x0 = dir < 0 ? ax - L : ax - 4, x1 = dir < 0 ? ax + 4 : ax + L;
+        for (let pass = 0; pass < 2; pass++) for (let y = by - 1 + pass; y < by + h + 1 - pass; y++) {
+          const r = y - by, tip = Math.round((h + 1 - pass * 2) / 2 - Math.abs(r - (h - 1) / 2));
+          for (let x = x0 - (dir < 0 ? tip : 0) - 1 + pass; x <= x1 + (dir > 0 ? tip : 0) + 1 - pass; x++)
+            set(x, y, pass === 0 ? cols[0] : r <= 0 ? cols[3] : r >= h - 2 ? cols[1] : cols[2]);
+        }
+        text(word, dir < 0 ? x0 + 1 : x1 - textWidth(word), by + 2, rgb(dusk ? "#e8e4f0" : "#ffffff"));
+        set(ax, by + 1, wood[0]); set(ax, by + h - 2, wood[0]);
+      };
+      for (let y = top; y <= base; y++) { set(px0 - 1, y, wood[3]); set(px0, y, wood[2]); set(px0 + 1, y, wood[1]); set(px0 + 2, y, wood[0]); }
+      rect(px0 - 2, top - 2, 5, 2, wood[0]);
+      board(px0, top + 3, -1, ["#163f86", "#1f56b5", "#3577dc", "#69a2ef"].map(rgb).map(dim), "WORK");
+      board(px0 + 1, top + 15, 1, ["#8a3f0b", "#c8661a", "#ef8a2b", "#ffb566"].map(rgb).map(dim), "HOME");
+    }
+
+    if (prop === "rails") {
+      const tie = ["#3b2716", "#5e4129"].map(rgb), rail = ["#40444c", "#7d838e", "#d6dbe3"].map(rgb);
+      for (const xb of track.ends) {
+        let lastY = Infinity;
+        for (let t = 0; t <= 1; t += .002) {
+          const [cx, y, g] = trackAt(t, xb);
+          if (lastY - y < Math.max(2, 6 * g / track.g0)) continue;
+          lastY = y;
+          const th = g > 9 ? 2 : 1;
+          for (let yy = 0; yy < th; yy++) for (let x = Math.round(cx - g * 1.32); x <= Math.round(cx + g * 1.32); x++) set(x, Math.round(y) + yy, tie[yy ? 0 : 1]);
+        }
+      }
+      for (const xb of track.ends) for (let t = 0; t <= 1; t += .0012) {
+        const [cx, y, g] = trackAt(t, xb);
+        for (const side of [-1, 1]) {
+          const rx = Math.round(cx + side * g), ry = Math.round(y);
+          set(rx, ry, rail[2]);
+          if (g > 5) set(rx, ry + 1, rail[1]);
+          if (g > 10) { set(rx + side, ry, rail[1]); set(rx, ry + 2, rail[0]); }
+        }
+      }
+      // the switch lever beside the split, and a signal showing green
+      const lx = Math.round(track.x0 - track.g0 * 1.9), ly = Math.round(H - 21 * ks);
+      rect(lx, ly, 8, 4, rgb("#3a3d44")); rect(lx, ly, 8, 1, rgb("#6b7079"));
+      for (let i = 0; i < 7; i++) set(lx + 4 + i * .55, ly - 1 - i, rgb("#2a2c31"));
+      rect(lx + 7, ly - 9, 2, 2, rgb("#e2483b"));
+      const sx = Math.round(W * .88), sy = Math.round(track.hz + 20 * ks), top = sy - Math.round(22 * ks);
+      rect(sx, top, 2, sy - top, rgb("#3c3f46")); rect(sx + 2, top, 1, sy - top, rgb("#25272c"));
+      rect(sx - 2, top - 11, 7, 12, rgb("#202227")); rect(sx - 2, top - 11, 7, 1, rgb("#4a4d55"));
+      rect(sx, top - 9, 3, 3, rgb("#5bea73")); set(sx, top - 9, rgb("#c9ffd2"));
+      rect(sx, top - 4, 3, 3, rgb("#5a2a2a"));
+      rect(sx - 3, sy, 9, 1, P.path[0]);
+    }
+
+    if (prop === "picnic") {
+      const cx = Math.round(W * .5), ty = Math.round(H - 12 * ks), tw = Math.round(30 * ks);
+      for (const side of [-1, 1]) for (let i = 0; i < 14 * ks; i++) {
+        const lx = cx + side * (tw - 7) + side * i * .3;
+        set(lx, ty + 3 + i, wood[0]); set(lx - side, ty + 3 + i, wood[1]);
+      }
+      for (let r = 0; r < 7; r++) { const hw = tw - 6 + r; for (let x = cx - hw; x <= cx + hw; x++) set(x, ty - 6 + r, r === 0 ? wood[3] : (x - cx + 60) % 8 === 0 ? wood[1] : wood[2]); }
+      for (let r = 0; r < 3; r++) for (let x = cx - tw; x <= cx + tw; x++) set(x, ty + 1 + r, r === 0 ? wood[2] : wood[1]);
+      // the laptop, open, its screen lit
+      const body = ["#7d828c", "#b9bec7", "#e3e6eb"].map(rgb), bez = rgb("#17181c");
+      const sw = Math.round(22 * ks), sh = Math.round(13 * ks), sx0 = cx - Math.round(sw / 2), sy0 = ty - 7 - sh;
+      rect(sx0 - 1, sy0 - 1, sw + 2, sh + 2, bez);
+      rect(sx0, sy0, sw, sh, rgb("#dfe9fb"));
+      rect(sx0 + 3, sy0 + 3, sw - 6, sh - 6, rgb("#ffffff"));
+      rect(sx0 + 4, sy0 + 4, 2, 2, rgb("#ff9500")); rect(sx0 + 7, sy0 + 4, sw - 12, 1, rgb("#9aa3b2")); rect(sx0 + 7, sy0 + 6, sw - 15, 1, rgb("#c9cfd8"));
+      rect(sx0 + sw - 8, sy0 + sh - 6, 4, 2, rgb("#007aff"));
+      for (let r = 0; r < 3; r++) for (let x = sx0 - 2 - r; x <= sx0 + sw + 1 + r; x++) set(x, ty - 7 + r, r === 0 ? body[2] : r === 1 ? body[1] : body[0]);
+      for (let x = sx0 + 2; x < sx0 + sw - 2; x += 2) set(x, ty - 6, body[0]);
+      // a mug
+      const mx = sx0 + sw + 6, my = ty - 11;
+      rect(mx, my, 5, 6, rgb("#f1ede6")); rect(mx + 3, my, 2, 6, rgb("#c9c2b6")); rect(mx, my, 5, 1, rgb("#6b4a33"));
+      set(mx + 5, my + 2, rgb("#c9c2b6")); set(mx + 6, my + 3, rgb("#c9c2b6")); set(mx + 5, my + 4, rgb("#c9c2b6"));
+      // fireflies
+      for (let i = 0; i < 9; i++) { const fx = W * (.12 + .76 * rnd()), fy = horizon + rnd() * (H - horizon) * .7; set(fx, fy, rgb("#ffe58a")); }
+    }
+
+    // The bottom can dissolve into the page in small blocks, the way pixel scenes melt into a site
+    if (el.hasAttribute("data-dissolve")) {
+      const E = Math.round(H * .12);
+      for (let y = H - E; y < H; y++) for (let x = 0; x < W; x++) {
+        const t = (y - (H - E)) / E;
+        if (t * 1.15 > hash(Math.floor(x / 2), Math.floor(y / 2), seed + 31) * .85 + BAYER[y & 7][x & 7] * .15) px[(y * W + x) * 4 + 3] = 0;
+      }
+    }
+    return px;
   }
 
-  // Copy buttons
-  document.querySelectorAll("[data-copy]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const text = document.getElementById("install-cmd").innerText.replace(/^\$ /gm, "");
-      try { await navigator.clipboard.writeText(text); } catch {}
-      btn.textContent = "Copied";
-      setTimeout(() => (btn.textContent = "Copy"), 1600);
-    });
+  // Drawn once, straight away, and again only when the width changes
+  const scenes = [...document.querySelectorAll("[data-scene]")].map(el => ({ el, canvas: el.querySelector("canvas.scene") }));
+  function draw(f) {
+    const r = f.el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const cell = +f.el.dataset.cell || 4, W = Math.ceil(r.width / cell), H = Math.ceil(r.height / cell);
+    const ctx = f.canvas.getContext("2d"), img = ctx.createImageData(W, H);
+    f.canvas.width = W; f.canvas.height = H;
+    f.canvas.style.width = W * cell + "px";
+    f.canvas.style.height = H * cell + "px";
+    img.data.set(paintScene(f.el, W, H));
+    ctx.putImageData(img, 0, 0);
+  }
+  scenes.forEach(draw);
+  let resizeTimer, lastW = innerWidth;
+  addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (innerWidth !== lastW) { lastW = innerWidth; scenes.forEach(draw); } }, 150);
   });
 
-  // FAQ: animate open and close
-  document.querySelectorAll("details").forEach(d => {
-    d.querySelector("summary").addEventListener("click", e => {
-      if (reduce) return;
-      e.preventDefault();
-      if (d.open) {
-        d.classList.add("closing");
-        setTimeout(() => { d.open = false; d.classList.remove("closing"); }, 330);
-      } else {
-        d.open = true;
-        requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add("opening")));
-        setTimeout(() => d.classList.remove("opening"), 360);
+  // ?hero=pixel draws the hero photo as pixel art instead: shrunk to 4px cells, reduced to a palette of
+  // 48 of its own colours, with an ordered pattern between neighbouring colours and a dissolving bottom edge
+  const stageEl = document.getElementById("stage");
+  if (/[?&]hero=pixel\b/.test(location.search)) {
+    const photo = new Image();
+    const drawPhoto = () => {
+      const r = stageEl.getBoundingClientRect(), cell = 4, W = Math.ceil(r.width / cell), H = Math.ceil(r.height / cell);
+      const work = document.createElement("canvas");
+      work.width = W; work.height = H;
+      const g = work.getContext("2d"), fit = Math.max(W / photo.width, H / photo.height);
+      g.imageSmoothingQuality = "high";
+      g.drawImage(photo, (W - photo.width * fit) / 2, (H - photo.height * fit) / 2, photo.width * fit, photo.height * fit);
+      const img = g.getImageData(0, 0, W, H), d = img.data, n = W * H, K = 48, cents = [];
+      // a little more colour first, so the palette keeps the greens and golds apart
+      for (let p = 0; p < d.length; p += 4) { const m = (d[p] + d[p + 1] + d[p + 2]) / 3; for (let ch = 0; ch < 3; ch++) d[p + ch] = Math.max(0, Math.min(255, m + (d[p + ch] - m) * 1.18)); }
+      for (let j = 0; j < K; j++) { const p = Math.floor(hash(j, 7, 3) * n) * 4; cents.push([d[p], d[p + 1], d[p + 2]]); }
+      for (let it = 0; it < 8; it++) {
+        const sum = cents.map(() => [0, 0, 0, 0]);
+        for (let i = 0; i < n; i++) {
+          const p = i * 4;
+          let best = 0, bd = Infinity;
+          for (let j = 0; j < K; j++) { const c = cents[j], dd = (c[0] - d[p]) ** 2 + (c[1] - d[p + 1]) ** 2 + (c[2] - d[p + 2]) ** 2; if (dd < bd) { bd = dd; best = j; } }
+          const sm = sum[best]; sm[0] += d[p]; sm[1] += d[p + 1]; sm[2] += d[p + 2]; sm[3]++;
+        }
+        sum.forEach((sm, j) => { if (sm[3]) cents[j] = [sm[0] / sm[3], sm[1] / sm[3], sm[2] / sm[3]]; });
       }
-    });
+      const E = Math.round(H * .12);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const p = (y * W + x) * 4;
+        let d1 = Infinity, d2 = Infinity, c1 = cents[0], c2 = cents[0];
+        for (const c of cents) {
+          const dd = (c[0] - d[p]) ** 2 * .3 + (c[1] - d[p + 1]) ** 2 * .59 + (c[2] - d[p + 2]) ** 2 * .11;
+          if (dd < d1) { d2 = d1; c2 = c1; d1 = dd; c1 = c; } else if (dd < d2) { d2 = dd; c2 = c; }
+        }
+        const t = Math.sqrt(d1) / (Math.sqrt(d1) + Math.sqrt(d2) + 1e-6), c = clamp((t - .25) / .25) > BAYER[y & 7][x & 7] ? c2 : c1;
+        d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2]; d[p + 3] = 255;
+        if (y >= H - E && ((y - (H - E)) / E) * 1.15 > hash(Math.floor(x / 2), Math.floor(y / 2), 31) * .85 + BAYER[y & 7][x & 7] * .15) d[p + 3] = 0;
+      }
+      const out = stageEl.querySelector("canvas.photo-px");
+      out.width = W; out.height = H;
+      out.style.width = W * cell + "px";
+      out.style.height = H * cell + "px";
+      out.getContext("2d").putImageData(img, 0, 0);
+      stageEl.classList.add("as-pixels");
+    };
+    let photoTimer;
+    photo.onload = () => {
+      drawPhoto();
+      addEventListener("resize", () => { clearTimeout(photoTimer); photoTimer = setTimeout(drawPhoto, 150); });
+    };
+    photo.src = stageEl.dataset.image;
+  }
+
+  // Tiles play their quiet animation only while on screen
+  document.querySelectorAll(".tile").forEach(t => {
+    if (!("IntersectionObserver" in window)) return t.classList.add("play");
+    new IntersectionObserver(es => es.forEach(e => t.classList.toggle("play", e.isIntersecting)), { threshold: .35 }).observe(t);
   });
 
-  // The panel demo, mirroring the app's behaviour
+  // Copy
+  document.querySelectorAll("[data-copy]").forEach(btn => btn.addEventListener("click", async () => {
+    const text = document.getElementById("install-cmd").innerText.replace(/^\$ /gm, "");
+    try { await navigator.clipboard.writeText(text); } catch {}
+    btn.textContent = "Copied";
+    setTimeout(() => (btn.textContent = "Copy"), 1600);
+  }));
+
+  // FAQ opens and closes smoothly
+  document.querySelectorAll("details").forEach(d => d.querySelector("summary").addEventListener("click", e => {
+    if (reduce) return;
+    e.preventDefault();
+    if (d.open) {
+      d.classList.add("closing");
+      setTimeout(() => { d.open = false; d.classList.remove("closing"); }, 330);
+    } else {
+      d.open = true;
+      requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add("opening")));
+      setTimeout(() => d.classList.remove("opening"), 360);
+    }
+  }));
+
+  // A live clock, like a real menu bar, shared with the receipt
+  const tick = () => {
+    const d = new Date(), time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/, "");
+    document.getElementById("clock").textContent = `${d.toLocaleDateString("en-US", { weekday: "short" })} ${time}`;
+    document.getElementById("rcTime").textContent = time;
+  };
+  tick(); setInterval(tick, 15000);
+
+  // ---------- The panel demo, mirroring the app ----------
   const accounts = {
     freelance: { name: "Freelance", email: "ada@studio.example", initials: "F", tint: "#af52de", last: "Last used yesterday" },
     personal: { name: "Personal", email: "ada@example.org", initials: "P", tint: "#ff9500", last: "Last used 2 hours ago" },
@@ -654,32 +1098,22 @@
   // A click that lands mid-switch runs once the switch is done, so the demo never ignores one.
   let queued = null;
 
-  const stage = document.getElementById("stage");
-  const panel = document.getElementById("panel");
-  const icon = document.getElementById("ourIcon");
-  const body = document.getElementById("pbody");
-  const list = document.getElementById("list");
-  const dot = document.getElementById("dot");
-  const status = document.getElementById("status");
-  const prAv = document.getElementById("prAv"), prTitle = document.getElementById("prTitle"), prSub = document.getElementById("prSub");
-  const stepsEl = document.getElementById("steps");
-
-  const plusSvg = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg>';
-  const checkSvg = '<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#007aff"/><path d="M4 7.2l2 1.9 4-4.3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const stage = document.getElementById("stage"), panel = document.getElementById("panel"), icon = document.getElementById("ourIcon");
+  const body = document.getElementById("pbody"), list = document.getElementById("list");
+  const dot = document.getElementById("dot"), status = document.getElementById("status");
+  const prAv = document.getElementById("prAv"), prTitle = document.getElementById("prTitle"), prSub = document.getElementById("prSub"), stepsEl = document.getElementById("steps");
+  const plusSvg = '<svg><use href="#plus"/></svg>', tickSvg = '<svg><use href="#tickfill"/></svg>';
   const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-  function detail(id) {
+  const detail = id => {
     const a = accounts[id];
     return id === current && !signedOut ? [a.email, a.org].filter(Boolean).join(" · ") : `${a.email} · ${a.last}`;
-  }
+  };
 
   function render(enterId) {
     const ids = Object.keys(accounts).sort((a, b) => accounts[a].name.localeCompare(accounts[b].name));
-    const currentName = signedOut ? "This account" : accounts[current].name;
-    let html = "";
-    if (signedOut) {
-      html += `<div class="notice"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="6"/><circle cx="7" cy="5.6" r="2"/><path d="M3.6 11.3c.7-1.5 1.9-2.2 3.4-2.2s2.7.7 3.4 2.2"/></svg><span>Claude is signed out. Sign in there to add an account, or switch to a saved one.</span></div>`;
-    }
+    const leaving = signedOut ? "This account" : accounts[current].name;
+    let html = signedOut ? `<div class="notice"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="6"/><circle cx="7" cy="5.6" r="2"/><path d="M3.6 11.3c.7-1.5 1.9-2.2 3.4-2.2s2.7.7 3.4 2.2"/></svg><span>Claude is signed out. Sign in there to add an account, or switch to a saved one.</span></div>` : "";
     for (const id of ids) {
       const a = accounts[id];
       html += `<div class="row${id === enterId ? " enter" : ""}" data-id="${id}">
@@ -687,24 +1121,23 @@
           <span class="row-text"><span class="row-name">${esc(a.name)}</span><span class="row-detail"></span></span>
           <span class="row-end"><span class="pill">In use</span><span class="go">Switch</span></span></button>
         <div class="confirm"><div><div class="confirm-inner">
-          <p>Claude restarts to switch. Anything running in it stops, and <b>${esc(currentName)}</b> stays signed in here.</p>
+          <p>Claude restarts to switch. Anything running in it stops, and <b>${esc(leaving)}</b> stays signed in here.</p>
           <div class="confirm-actions"><button class="b-out" type="button" data-act="cancel">Cancel</button><button class="b-fill" type="button" data-act="switch">Switch</button></div>
         </div></div></div></div>`;
     }
     if (!signedOut && extra.length) {
       html += `<div class="row" data-id="add">
-        <button class="row-main" type="button"><span class="av add">${plusSvg}</span>
-          <span class="row-text"><span class="row-name plain">Add another account</span></span></button>
+        <button class="row-main" type="button"><span class="av add">${plusSvg}</span><span class="row-text"><span class="row-name plain">Add another account</span></span></button>
         <div class="confirm"><div><div class="confirm-inner">
-          <p>Claude restarts at the sign-in screen. Sign in there with the other account. <b>${esc(currentName)}</b> stays signed in here.</p>
+          <p>Claude restarts at the sign-in screen. Sign in there with the other account. <b>${esc(leaving)}</b> stays signed in here.</p>
           <div class="confirm-actions"><button class="b-out" type="button" data-act="cancel">Cancel</button><button class="b-fill" type="button" data-act="switch">Continue</button></div>
         </div></div></div></div>`;
     }
     list.innerHTML = html;
-    paint();
+    paintRows();
   }
 
-  function paint() {
+  function paintRows() {
     list.querySelectorAll(".row").forEach(row => {
       const id = row.dataset.id;
       row.classList.toggle("is-current", id === current && !signedOut);
@@ -722,14 +1155,13 @@
   function toggle(id) {
     if (busy || (id === current && !signedOut)) return;
     expanded = expanded === id ? null : id;
-    paint();
+    paintRows();
   }
 
   async function morph(change) {
     const from = body.offsetHeight;
     change();
-    const active = body.classList.contains("show-progress") ? body.querySelector(".progress") : list;
-    const to = active.offsetHeight;
+    const to = (body.classList.contains("show-progress") ? body.querySelector(".progress") : list).offsetHeight;
     body.style.height = from + "px";
     void body.offsetHeight;
     body.style.height = to + "px";
@@ -737,30 +1169,21 @@
     body.style.height = "";
   }
 
-  function setSteps(labels, at) {
-    stepsEl.innerHTML = labels.map((l, i) =>
-      `<li class="${i < at ? "done" : i === at ? "active" : ""}"><span class="st">${checkSvg}</span><span>${esc(l)}</span></li>`).join("");
-  }
-  function advance(at) {
-    stepsEl.querySelectorAll("li").forEach((li, i) => { li.className = i < at ? "done" : i === at ? "active" : ""; });
-  }
+  const setSteps = (labels, at) => (stepsEl.innerHTML = labels.map((l, i) => `<li class="${i < at ? "done" : i === at ? "active" : ""}"><span class="st">${tickSvg}</span><span>${esc(l)}</span></li>`).join(""));
+  const advance = at => stepsEl.querySelectorAll("li").forEach((li, i) => (li.className = i < at ? "done" : i === at ? "active" : ""));
 
   async function run(target) {
     if (busy) return;
     busy = true;
     expanded = null;
-    const adding = target === "add";
-    const leaving = signedOut ? null : accounts[current].name;
-    const t = adding ? null : accounts[target];
+    const adding = target === "add", leaving = signedOut ? null : accounts[current].name, t = adding ? null : accounts[target];
     prAv.className = adding ? "av add" : "av";
     prAv.innerHTML = adding ? plusSvg : t.initials;
     if (!adding) prAv.style.setProperty("--t", t.tint);
     prTitle.textContent = adding ? "Adding an account" : `Switching to ${t.name}`;
     prSub.textContent = "Claude restarts to switch.";
-    const labels = ["Quit Claude", leaving ? `Save ${leaving}` : "Back up the current sign-in",
-      adding ? "Clear the sign-in" : `Sign in as ${t.name}`, adding ? "Open Claude at the sign-in screen" : "Open Claude"];
-    setSteps(labels, 0);
-    await morph(() => { paint(); body.classList.add("show-progress"); });
+    setSteps(["Quit Claude", leaving ? `Save ${leaving}` : "Back up the current sign-in", adding ? "Clear the sign-in" : `Sign in as ${t.name}`, adding ? "Open Claude at the sign-in screen" : "Open Claude"], 0);
+    await morph(() => { paintRows(); body.classList.add("show-progress"); });
     await sleep(950); setStatus(false); advance(1);
     await sleep(480); advance(2);
     await sleep(480); advance(3);
@@ -783,7 +1206,6 @@
     } else {
       current = target;
       signedOut = false;
-      setStatus(true);
       await morph(() => { body.classList.remove("show-progress"); render(); });
     }
     busy = false;
@@ -791,7 +1213,7 @@
   }
 
   function handle(id, act) {
-    if (act === "cancel") { expanded = null; paint(); return; }
+    if (act === "cancel") { expanded = null; paintRows(); return; }
     if (act === "switch") { run(id); return; }
     toggle(id);
   }
@@ -806,34 +1228,17 @@
     handle(row.dataset.id, act);
   });
 
-  // Keep the panel under the menu bar icon, the way the app places it
-  function place() {
-    const s = stage.getBoundingClientRect(), i = icon.getBoundingClientRect();
-    const w = panel.offsetWidth;
-    const center = i.left + i.width / 2 - s.left;
-    panel.style.left = Math.min(Math.max(center - w / 2, 12), s.width - w - 12) + "px";
-  }
-  addEventListener("resize", place);
-
   let open = true;
-  function setOpen(v) { open = v; panel.classList.toggle("closed", !v); icon.classList.toggle("on", v); }
+  const setOpen = v => { open = v; panel.classList.toggle("closed", !v); icon.classList.toggle("on", v); };
   icon.addEventListener("click", () => { stopAuto(); setOpen(!open); });
   icon.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); stopAuto(); setOpen(!open); } });
   stage.addEventListener("click", e => { if (open && !panel.contains(e.target) && !icon.contains(e.target)) { stopAuto(); setOpen(false); } });
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape" || !open) return;
-    if (expanded) { expanded = null; paint(); } else setOpen(false);
+    if (expanded) { expanded = null; paintRows(); } else setOpen(false);
   });
 
-  // A live clock, like a real menu bar
-  function tick() {
-    const d = new Date();
-    document.getElementById("clock").textContent =
-      d.toLocaleDateString("en-US", { weekday: "short" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/, "");
-  }
-  tick(); setInterval(tick, 15000);
-
-  // Plays itself until someone touches it
+  // Plays itself until someone reaches for it
   function stopAuto() {
     if (!auto) return;
     auto = false;
@@ -845,10 +1250,9 @@
 
   async function autoplay() {
     const plan = ["personal", "work"];
-    await sleep(1600);
+    await sleep(2000);
     for (let i = 0; auto; i++) {
-      const id = plan[i % plan.length];
-      const row = list.querySelector(`.row[data-id="${id}"]`);
+      const id = plan[i % plan.length], row = list.querySelector(`.row[data-id="${id}"]`);
       if (!row) break;
       row.classList.add("is-hover"); await sleep(700); if (!auto) break;
       toggle(id); await sleep(1500); if (!auto) break;
@@ -862,11 +1266,7 @@
   }
 
   render();
-  place();
-  const startWhenSeen = new IntersectionObserver(entries => {
-    if (entries.some(e => e.isIntersecting)) { startWhenSeen.disconnect(); if (auto) autoplay(); }
-  }, { threshold: .5 });
-  startWhenSeen.observe(stage);
+  if (auto) seen(stage, autoplay, "0px");
 })();
 </script>
 </body>
